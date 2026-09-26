@@ -1,0 +1,183 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Personal Control Center configuration v1",
+  "type": "object",
+  "description": "结构校验参考；大小、loopback、快捷入口路径和跨字段引用由 ConfigCodec.Validate 最终校验。未知字段本机编辑保留，便携迁移移除。",
+  "properties": {
+    "schemaVersion": {
+      "const": 1,
+      "default": 1
+    },
+    "appearance": {
+      "type": "object",
+      "properties": {
+        "theme": {
+          "enum": [
+            "system",
+            "light",
+            "dark"
+          ],
+          "default": "system"
+        },
+        "fontFamily": {
+          "type": "string",
+          "default": "PingFang SC"
+        },
+        "motion": {
+          "enum": [
+            "subtle",
+            "off"
+          ]
+        },
+        "material": {
+          "const": "solid"
+        }
+      },
+      "additionalProperties": true
+    },
+    "modules": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 5,
+      "items": {
+        "enum": [
+          "audio",
+          "power",
+          "awake",
+          "proxy",
+          "shortcuts"
+        ]
+      },
+      "description": "显示顺序；缺省显示全部，空数组隐藏所有模块，但设置/退出入口保留。"
+    },
+    "hotkey": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "required": [
+            "modifiers",
+            "key"
+          ],
+          "properties": {
+            "modifiers": {
+              "enum": [
+                1,
+                2,
+                3,
+                5,
+                6,
+                7
+              ]
+            },
+            "key": {
+              "type": "integer",
+              "anyOf": [
+                {
+                  "minimum": 48,
+                  "maximum": 57
+                },
+                {
+                  "minimum": 65,
+                  "maximum": 90
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "default": null
+    },
+    "proxy": {
+      "type": "object",
+      "properties": {
+        "host": {
+          "type": "string",
+          "description": "IPAddress.TryParse 后必须为 loopback IP 字面量；不接受主机名。",
+          "default": "127.0.0.1"
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535,
+          "default": 7897
+        },
+        "testUrl": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2048,
+          "description": "HTTP/HTTPS，无凭据或片段；null 表示未设置目标。"
+        },
+        "shortcutId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "非空时须引用 application 快捷入口。"
+        }
+      },
+      "additionalProperties": true
+    },
+    "shortcuts": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "kind",
+          "target"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "kind": {
+            "enum": [
+              "knownFolder",
+              "folder",
+              "application",
+              "url"
+            ]
+          },
+          "target": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "arguments": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "maxItems": 32,
+            "items": {
+              "type": "string",
+              "maxLength": 4096
+            }
+          },
+          "workingDirectory": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "description": "knownFolder 仅 Downloads；folder/application 限本机绝对路径，application 必须 .exe；url 限无凭据 HTTP/HTTPS。仅 application 可以使用参数与工作目录。"
+      }
+    }
+  },
+  "additionalProperties": true
+}

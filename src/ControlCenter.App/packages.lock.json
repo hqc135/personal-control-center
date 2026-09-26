@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net10.0-windows7.0": {
+      "controlcenter.core": {
+        "type": "Project"
+      },
+      "controlcenter.windows": {
+        "type": "Project",
+        "dependencies": {
+          "ControlCenter.Core": "[1.0.0, )"
+        }
+      }
+    }
+  }
+}

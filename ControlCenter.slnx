@@ -1,0 +1,1 @@
+<Solution><Project Path="src/ControlCenter.Core/ControlCenter.Core.csproj" /><Project Path="src/ControlCenter.Windows/ControlCenter.Windows.csproj" /><Project Path="src/ControlCenter.App/ControlCenter.App.csproj" /><Project Path="tests/ControlCenter.Tests/ControlCenter.Tests.csproj" /></Solution>

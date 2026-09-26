@@ -1,0 +1,45 @@
+<Window x:Class="ControlCenter.App.Views.SettingsWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+Title="设置 · 个人控制中心" Width="480" Height="670" MinHeight="420" WindowStartupLocation="CenterScreen" Background="{DynamicResource BackgroundBrush}" Foreground="{DynamicResource TextBrush}" FontFamily="Microsoft YaHei UI" FontSize="13">
+<ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="24">
+<TextBlock Text="让面板用起来顺手" FontSize="20" FontWeight="SemiBold"/>
+<TextBlock Text="外观、代理检测与常用入口。" Style="{StaticResource Secondary}" TextWrapping="Wrap" Margin="0,8,0,18"/>
+<TextBlock Text="外观" FontWeight="SemiBold" Margin="0,0,0,8"/>
+<RadioButton x:Name="SystemTheme" Content="跟随 Windows" GroupName="Theme" Checked="Edited"/>
+<RadioButton x:Name="LightTheme" Content="浅色" GroupName="Theme" Checked="Edited"/>
+<RadioButton x:Name="DarkTheme" Content="深色" GroupName="Theme" Checked="Edited"/>
+<CheckBox x:Name="Motion" Content="轻微开合动画" Margin="0,10,0,4" Checked="Edited" Unchecked="Edited"/>
+<TextBlock Text="尊重 Windows 动画设置；可随时关闭。" Style="{StaticResource Secondary}"/>
+<TextBlock Text="模块顺序与显示" FontWeight="SemiBold" Margin="0,20,0,8"/>
+<ListBox x:Name="ModuleList" Height="150" Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource TextBrush}">
+<ListBox.ItemTemplate><DataTemplate><CheckBox Content="{Binding Label}" IsChecked="{Binding Enabled}" Checked="Edited" Unchecked="Edited"/></DataTemplate></ListBox.ItemTemplate>
+</ListBox>
+<WrapPanel Margin="0,6"><Button Content="上移" Click="ModuleUp_Click" Margin="0,0,8,0"/><Button Content="下移" Click="ModuleDown_Click"/></WrapPanel>
+<TextBlock Text="隐藏模块不结束已开启的保持唤醒；请先结束请求或重新显示模块。" Style="{StaticResource Secondary}" TextWrapping="Wrap"/>
+<TextBlock Text="打开面板的全局快捷键" FontWeight="SemiBold" Margin="0,20,0,8"/>
+<TextBox x:Name="HotkeyText" TextChanged="Edited" MaxLength="30" AutomationProperties.Name="全局快捷键"/>
+<TextBlock Text="留空为关闭。格式如 Ctrl+Alt+P；保存后尝试注册，冲突不影响托盘。" Style="{StaticResource Secondary}" TextWrapping="Wrap" Margin="0,4"/>
+<TextBlock x:Name="HotkeyStatus" Style="{StaticResource Secondary}" TextWrapping="Wrap"/>
+<TextBlock Text="常用入口" FontWeight="SemiBold" Margin="0,20,0,8"/>
+<ListBox x:Name="ShortcutList" Height="135" DisplayMemberPath="Label" Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource TextBrush}" AutomationProperties.Name="常用入口列表"/>
+<WrapPanel Margin="0,8,0,0"><Button Content="添加" Click="Add_Click" Margin="0,0,6,6"/><Button Content="编辑" Click="Edit_Click" Margin="0,0,6,6"/><Button Content="移除" Click="Remove_Click" Margin="0,0,6,6"/><Button Content="确认程序入口" Click="Confirm_Click" Margin="0,0,6,6"/></WrapPanel>
+<TextBlock Text="目录或 HTTP/HTTPS 网页可直接打开。程序入口须先核对目标与参数；导入配置不会自动获得信任。" Style="{StaticResource Secondary}" TextWrapping="Wrap"/>
+<TextBlock Text="代理检测" FontWeight="SemiBold" Margin="0,20,0,8"/>
+<TextBlock Text="本机 IP 地址 / 端口" Style="{StaticResource Secondary}"/>
+<Grid Margin="0,4,0,8"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="90"/></Grid.ColumnDefinitions><TextBox x:Name="ProxyHost" TextChanged="Edited" AutomationProperties.Name="代理本机 IP"/><TextBox x:Name="ProxyPort" Grid.Column="1" Margin="8,0,0,0" MaxLength="5" TextChanged="Edited" AutomationProperties.Name="代理端口"/></Grid>
+<TextBlock Text="手动测试目标（HTTP/HTTPS，可留空）" Style="{StaticResource Secondary}"/>
+<TextBox x:Name="ProxyTarget" Margin="0,4,0,8" MaxLength="2048" TextChanged="Edited" AutomationProperties.Name="手动代理测试网址"/>
+<TextBlock Text="打开代理：选择上方程序入口后绑定；仍须确认程序入口。" Style="{StaticResource Secondary}" TextWrapping="Wrap"/>
+<TextBlock x:Name="ProxyEntryLabel" Margin="0,4"/>
+<WrapPanel><Button Content="绑定所选入口" Click="BindProxy_Click" Margin="0,0,8,0"/><Button Content="清除绑定" Click="ClearProxy_Click"/></WrapPanel>
+<TextBlock Text="配置迁移与恢复" FontWeight="SemiBold" Margin="0,20,0,8"/>
+<TextBlock Text="导入仅填入草稿，保存后生效。便携导入/导出不携带本机路径、网页入口、测试目标、快捷键或程序信任；这些项目需在本机重新配置。" Style="{StaticResource Secondary}" TextWrapping="Wrap"/>
+<WrapPanel Margin="0,8"><Button Content="导入草稿" Click="Import_Click" Margin="0,0,8,0"/><Button Content="导出便携配置" Click="Export_Click"/></WrapPanel>
+<ComboBox x:Name="BackupList" DisplayMemberPath="Id" AutomationProperties.Name="本机配置备份"/>
+<Button Content="读取所选备份到草稿" Click="Restore_Click" Margin="0,8,0,0"/>
+<TextBlock Text="用户登录后启动" FontWeight="SemiBold" Margin="0,20,0,8"/>
+<TextBlock x:Name="StartupStatus" Text="读取登记状态…" Style="{StaticResource Secondary}" TextWrapping="Wrap"/>
+<WrapPanel x:Name="StartupButtons" Margin="0,8"><Button Content="启用当前用户自启" Click="EnableStartup_Click" Margin="0,0,8,0"/><Button Content="关闭本程序自启" Click="DisableStartup_Click"/></WrapPanel>
+<TextBlock Text="此处按钮立即更新本程序的用户登记，与下方保存/取消无关；默认关闭，不随导入配置启用。不使用管理员权限。" Style="{StaticResource Secondary}" TextWrapping="Wrap"/>
+<TextBlock x:Name="Status" TextWrapping="Wrap" Margin="0,12,0,0" Style="{StaticResource Secondary}" AutomationProperties.LiveSetting="Polite"/>
+<StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0"><Button Content="取消" Click="Cancel_Click" Margin="0,0,8,0" IsCancel="True"/><Button x:Name="SaveButton" Content="保存" Click="Save_Click" IsDefault="True"/></StackPanel>
+</StackPanel></ScrollViewer></Window>

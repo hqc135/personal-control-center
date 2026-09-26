@@ -1,0 +1,46 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+<SolidColorBrush x:Key="BackgroundBrush" Color="#F4F5F7"/><SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF"/>
+<SolidColorBrush x:Key="TextBrush" Color="#20242B"/><SolidColorBrush x:Key="SecondaryBrush" Color="#59616D"/>
+<SolidColorBrush x:Key="AccentBrush" Color="#315FC3"/><SolidColorBrush x:Key="AccentSurfaceBrush" Color="#EAF0FC"/>
+<SolidColorBrush x:Key="BorderBrush" Color="#DCE0E7"/><SolidColorBrush x:Key="HoverBrush" Color="#E9ECF2"/>
+<Style TargetType="TextBlock"><Setter Property="Foreground" Value="{DynamicResource TextBrush}"/><Setter Property="FontSize" Value="13"/></Style>
+<Style x:Key="Secondary" TargetType="TextBlock"><Setter Property="Foreground" Value="{DynamicResource SecondaryBrush}"/><Setter Property="FontSize" Value="12"/></Style>
+<Style x:Key="Card" TargetType="Border"><Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/><Setter Property="CornerRadius" Value="12"/><Setter Property="Padding" Value="14"/><Setter Property="Margin" Value="0,0,0,10"/></Style>
+<Style TargetType="Button">
+<Setter Property="Foreground" Value="{DynamicResource TextBrush}"/><Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+<Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/><Setter Property="BorderThickness" Value="1"/>
+<Setter Property="Padding" Value="10,6"/><Setter Property="MinHeight" Value="32"/><Setter Property="Cursor" Value="Hand"/>
+<Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+<Border x:Name="Chrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8">
+<ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}" RecognizesAccessKey="True"/>
+</Border><ControlTemplate.Triggers>
+<Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chrome" Property="Background" Value="{DynamicResource HoverBrush}"/></Trigger>
+<Trigger Property="IsPressed" Value="True"><Setter TargetName="Chrome" Property="Background" Value="{DynamicResource AccentSurfaceBrush}"/></Trigger>
+<Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/><Setter TargetName="Chrome" Property="BorderThickness" Value="2"/></Trigger>
+<Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.5"/></Trigger>
+</ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
+</Style>
+<Style x:Key="SliderTrack" TargetType="RepeatButton">
+<Setter Property="Focusable" Value="False"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="RepeatButton"><Border Height="4" CornerRadius="2" Background="{TemplateBinding Background}" VerticalAlignment="Center"/></ControlTemplate></Setter.Value></Setter>
+</Style>
+<Style TargetType="Slider">
+<Setter Property="MinHeight" Value="32"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Slider">
+<Grid Background="Transparent"><Track x:Name="PART_Track" Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}" Value="{Binding Value, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
+<Track.DecreaseRepeatButton><RepeatButton Command="{x:Static Slider.DecreaseLarge}" Background="{DynamicResource AccentBrush}" Style="{StaticResource SliderTrack}"/></Track.DecreaseRepeatButton>
+<Track.Thumb><Thumb Width="16" Height="24"><Thumb.Template><ControlTemplate TargetType="Thumb"><Ellipse x:Name="Knob" Width="16" Height="16" Fill="{DynamicResource SurfaceBrush}" Stroke="{DynamicResource AccentBrush}" StrokeThickness="2"/><ControlTemplate.Triggers><Trigger Property="IsDragging" Value="True"><Setter TargetName="Knob" Property="Fill" Value="{DynamicResource AccentSurfaceBrush}"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Thumb.Template></Thumb></Track.Thumb>
+<Track.IncreaseRepeatButton><RepeatButton Command="{x:Static Slider.IncreaseLarge}" Background="{DynamicResource BorderBrush}" Style="{StaticResource SliderTrack}"/></Track.IncreaseRepeatButton>
+</Track><Border x:Name="FocusRing" CornerRadius="5" BorderBrush="Transparent" BorderThickness="1" IsHitTestVisible="False"/></Grid>
+<ControlTemplate.Triggers><Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="FocusRing" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/></Trigger></ControlTemplate.Triggers>
+</ControlTemplate></Setter.Value></Setter>
+</Style>
+<Style TargetType="CheckBox"><Setter Property="Foreground" Value="{DynamicResource TextBrush}"/><Setter Property="VerticalContentAlignment" Value="Center"/><Setter Property="MinHeight" Value="30"/>
+<Setter Property="Template"><Setter.Value><ControlTemplate TargetType="CheckBox"><Grid Background="Transparent"><Grid.ColumnDefinitions><ColumnDefinition Width="22"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+<Border x:Name="Box" Width="14" Height="14" CornerRadius="3" BorderThickness="1" BorderBrush="{DynamicResource SecondaryBrush}" Background="{DynamicResource SurfaceBrush}" HorizontalAlignment="Left">
+<Path x:Name="Tick" Data="M 2,6 L 5,9 L 11,2" Stroke="{DynamicResource AccentBrush}" StrokeThickness="2" Visibility="Collapsed"/></Border>
+<ContentPresenter Grid.Column="1" VerticalAlignment="Center" RecognizesAccessKey="True"/></Grid>
+<ControlTemplate.Triggers><Trigger Property="IsChecked" Value="True"><Setter TargetName="Tick" Property="Visibility" Value="Visible"/><Setter TargetName="Box" Property="Background" Value="{DynamicResource AccentSurfaceBrush}"/></Trigger><Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/><Setter TargetName="Box" Property="BorderThickness" Value="2"/></Trigger></ControlTemplate.Triggers>
+</ControlTemplate></Setter.Value></Setter>
+</Style>
+<Style TargetType="RadioButton"><Setter Property="Foreground" Value="{DynamicResource TextBrush}"/><Setter Property="MinHeight" Value="32"/><Setter Property="VerticalContentAlignment" Value="Center"/></Style>
+<Style TargetType="TextBox"><Setter Property="MinHeight" Value="32"/><Setter Property="Padding" Value="8,4"/><Setter Property="Foreground" Value="{DynamicResource TextBrush}"/><Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/><Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/><Setter Property="VerticalContentAlignment" Value="Center"/></Style>
+</ResourceDictionary>
