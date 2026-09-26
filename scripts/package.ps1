@@ -1,33 +1,62 @@
-# Packages existing build outputs only; does not launch the application or contact the network.
+param([ValidateSet('framework-dependent','self-contained')][string]$Mode = 'framework-dependent')
+# Packages a clean Git commit and matching build; never starts the application.
 $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path $PSScriptRoot -Parent)
-$workspace = (Get-Location).Path
 [System.Diagnostics.Process]::GetCurrentProcess().PriorityClass = 'BelowNormal'
-$published = Join-Path $workspace 'artifacts/B4-CANDIDATE-framework-dependent'
-if (!(Test-Path (Join-Path $published 'PersonalControlCenter.exe'))) { throw 'Publish the candidate before packaging.' }
+$workspace = (Get-Location).Path
+$commit = git rev-parse HEAD
+if ($LASTEXITCODE -or @(git status --porcelain).Count) { throw 'Commit all source changes before packaging.' }
+$published = Join-Path $workspace ('artifacts/B5-CANDIDATE-' + $Mode)
+$receipt = Get-Content -Raw ('artifacts/evidence/B5/build-' + $Mode + '.json') | ConvertFrom-Json
+if ($receipt.Dirty -or $receipt.Commit -ne $commit -or $receipt.Mode -ne $Mode) { throw 'Build does not match clean HEAD; rebuild.' }
+foreach ($entry in $receipt.Files) {
+    if ((Get-FileHash -LiteralPath (Join-Path $published $entry.Path) -Algorithm SHA256).Hash -ne $entry.SHA256) { throw ('Published output changed: ' + $entry.Path) }
+}
+if (!(Test-Path (Join-Path $published 'PersonalControlCenter.exe'))) { throw 'Published executable missing.' }
+if ($Mode -eq 'self-contained' -and !(Test-Path (Join-Path $published 'coreclr.dll'))) { throw 'Self-contained runtime missing.' }
 $stage = Join-Path $workspace ('artifacts/staging-' + [Guid]::NewGuid().ToString('N'))
 $release = Join-Path $stage 'release'
 $source = Join-Path $stage 'source'
 New-Item -ItemType Directory -Force $release,$source | Out-Null
-Get-ChildItem -LiteralPath $published -File | Where-Object { $_.Extension -in '.exe','.dll','.json' } | Copy-Item -Destination $release
-Copy-Item -LiteralPath (Join-Path $published 'Assets') -Destination $release -Recurse
+foreach ($file in Get-ChildItem -LiteralPath $published -File -Recurse) {
+    if ($file.Extension -eq '.pdb') { continue }
+    $destination = Join-Path $release ([IO.Path]::GetRelativePath($published, $file.FullName))
+    New-Item -ItemType Directory -Force (Split-Path $destination -Parent) | Out-Null
+    Copy-Item -LiteralPath $file.FullName -Destination $destination
+}
 Copy-Item -LiteralPath 'docs/PACKAGE_README.md' -Destination (Join-Path $release 'README.md')
-Copy-Item -LiteralPath 'LICENSE','THIRD-PARTY-NOTICES.md' -Destination $release
-Copy-Item -LiteralPath 'docs/config.schema.json','docs/CONFIGURATION_GUIDE.md','docs/AUDIO_COMPATIBILITY.md' -Destination $release
-'{"schemaVersion":1,"hotkey":null,"appearance":{"theme":"system","fontFamily":"PingFang SC","motion":"subtle","material":"solid"},"proxy":{"host":"127.0.0.1","port":7897,"testUrl":null,"shortcutId":null},"modules":["audio","power","awake","proxy","shortcuts"],"shortcuts":[{"id":"downloads","label":"下载","kind":"knownFolder","target":"Downloads"}]}' | Set-Content -LiteralPath (Join-Path $release 'config.example.json') -Encoding utf8
-$files = @(rg --files --hidden -g '!.git/**' -g '!.tools/**' -g '!artifacts/**' -g '!**/bin/**' -g '!**/obj/**' | Sort-Object)
-$manifest = @(
-    foreach ($relative in $files) {
-        $destination = Join-Path $source $relative
-        New-Item -ItemType Directory -Force (Split-Path $destination -Parent) | Out-Null
-        Copy-Item -LiteralPath $relative -Destination $destination
-        [PSCustomObject]@{Path=$relative; SHA256=(Get-FileHash -LiteralPath $relative -Algorithm SHA256).Hash}
+Copy-Item -LiteralPath 'LICENSE','THIRD-PARTY-NOTICES.md','docs/config.schema.json','docs/CONFIGURATION_GUIDE.md','docs/AUDIO_COMPATIBILITY.md','docs/RELEASE_CHECKLIST.md' -Destination $release
+Copy-Item -LiteralPath 'artifacts/evidence/B5/dependencies.json' -Destination (Join-Path $release 'DEPENDENCIES.json')
+if ($Mode -eq 'self-contained') {
+    $licenses = Join-Path $release 'runtime-notices'
+    New-Item -ItemType Directory -Force $licenses | Out-Null
+    foreach ($id in @('microsoft.netcore.app.runtime.win-x64','microsoft.windowsdesktop.app.runtime.win-x64')) {
+        foreach ($name in @('LICENSE.TXT','THIRD-PARTY-NOTICES.TXT')) {
+            $notice = Get-ChildItem -LiteralPath (Join-Path '.tools/packages' ($id + '/10.0.12')) -File | Where-Object { $_.Name -ieq $name } | Select-Object -First 1
+            if (!$notice) { throw ('Missing runtime notice: ' + $id + '/' + $name) }
+            Copy-Item -LiteralPath $notice.FullName -Destination (Join-Path $licenses ($id + '-' + $name))
+        }
     }
-)
-$manifest | ConvertTo-Json | Set-Content 'artifacts/evidence/B4/source-manifest.json' -Encoding utf8
-Compress-Archive -Path (Join-Path $release '*') -DestinationPath 'artifacts/PersonalControlCenter-B4-CANDIDATE-framework-dependent.zip' -Force
-Compress-Archive -Path (Join-Path $source '*') -DestinationPath 'artifacts/PersonalControlCenter-B4-source.zip' -Force
-Get-FileHash -Algorithm SHA256 -LiteralPath 'artifacts/PersonalControlCenter-B4-CANDIDATE-framework-dependent.zip','artifacts/PersonalControlCenter-B4-source.zip','artifacts/evidence/B4/source-manifest.json' |
-    ForEach-Object { $_.Hash + '  ' + (Split-Path $_.Path -Leaf) } | Set-Content 'artifacts/B4-SHA256.txt' -Encoding utf8
-Get-Content 'artifacts/B4-SHA256.txt'
+}
+'{"schemaVersion":1,"hotkey":null,"appearance":{"theme":"system","fontFamily":"PingFang SC","motion":"subtle","material":"solid"},"proxy":{"host":"127.0.0.1","port":7897,"testUrl":null,"shortcutId":null},"modules":["audio","power","awake","proxy","shortcuts"],"shortcuts":[{"id":"downloads","label":"下载","kind":"knownFolder","target":"Downloads"}]}' | Set-Content -LiteralPath (Join-Path $release 'config.example.json') -Encoding utf8
+$manifest = @(foreach ($relative in @(git -c core.quotepath=false ls-files)) {
+    if ($relative -match '^(\.tools|artifacts|\.git)/|(^|/)(bin|obj)/') { throw 'Non-source file tracked by Git.' }
+    $destination = Join-Path $source $relative
+    New-Item -ItemType Directory -Force (Split-Path $destination -Parent) | Out-Null
+    Copy-Item -LiteralPath $relative -Destination $destination
+    [PSCustomObject]@{Path=$relative; SHA256=(Get-FileHash -LiteralPath $relative -Algorithm SHA256).Hash}
+})
+$manifest | ConvertTo-Json | Set-Content artifacts/evidence/B5/source-manifest.json -Encoding utf8
+$commit | Set-Content -LiteralPath (Join-Path $source 'SOURCE_COMMIT.txt') -Encoding ascii
+$payload = @(Get-ChildItem -LiteralPath $release -File -Recurse | ForEach-Object {
+    [ordered]@{Path=[IO.Path]::GetRelativePath($release,$_.FullName); SHA256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash}
+})
+[ordered]@{Version='0.5.0';Commit=$commit;Mode=$Mode;Acceptance='Noninteractive only; real-machine acceptance pending';Files=$payload} |
+    ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $release 'RELEASE.json') -Encoding utf8
+$zip = 'artifacts/PersonalControlCenter-B5-CANDIDATE-' + $Mode + '.zip'
+Compress-Archive -Path (Join-Path $release '*') -DestinationPath $zip -Force
+Compress-Archive -Path (Join-Path $source '*') -DestinationPath artifacts/PersonalControlCenter-B5-source.zip -Force
+Get-FileHash -Algorithm SHA256 -LiteralPath $zip,'artifacts/PersonalControlCenter-B5-source.zip','artifacts/evidence/B5/source-manifest.json' |
+    ForEach-Object { $_.Hash + '  ' + (Split-Path $_.Path -Leaf) } | Set-Content ('artifacts/B5-' + $Mode + '-SHA256.txt') -Encoding utf8
+Get-Content ('artifacts/B5-' + $Mode + '-SHA256.txt')
 

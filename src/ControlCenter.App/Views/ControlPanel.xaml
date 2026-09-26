@@ -1,5 +1,5 @@
 <Window x:Class="ControlCenter.App.Views.ControlPanel" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-Title="个人控制中心 · 第四轮候选" Width="360" SizeToContent="Height" WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False" Topmost="True"
+Title="个人控制中心 · 第五轮候选" Width="360" SizeToContent="Height" WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False" Topmost="True"
 Background="{DynamicResource BackgroundBrush}" Foreground="{DynamicResource TextBrush}" FontFamily="Microsoft YaHei UI" FontSize="13" UseLayoutRounding="True">
 <Window.Resources><BooleanToVisibilityConverter x:Key="BoolVisibility"/></Window.Resources>
 <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="15">

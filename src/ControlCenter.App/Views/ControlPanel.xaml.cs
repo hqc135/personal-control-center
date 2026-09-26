@@ -71,6 +71,18 @@ public partial class ControlPanel : Window
             new(placement.Work.Left, placement.Work.Top, placement.Work.Right - placement.Work.Left, placement.Work.Bottom - placement.Work.Top), 12 * scale);
         NativeWindow.Position(new WindowInteropHelper(this).Handle, (int)target.X, (int)target.Y);
     }
+    public void RefreshPlacement()
+    {
+        if (!IsVisible || exiting) return;
+        var placement = NativeWindow.Placement(anchorTray);
+        MaxHeight = Math.Max(120, (placement.Work.Bottom - placement.Work.Top) / placement.Scale - 24);
+        KeepInWorkArea();
+    }
+    protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
+    {
+        base.OnDpiChanged(oldDpi, newDpi);
+        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, RefreshPlacement);
+    }
     private void ModelChanged(object? sender, PropertyChangedEventArgs e) { if (e.PropertyName == nameof(Model.Modules)) ApplyModules(); }
     private void ApplyModules()
     {

@@ -5,6 +5,8 @@ public sealed class ShutdownLog(string directory)
 {
     private readonly object gate = new();
     public void Write(ShutdownModule module, ShutdownResult result)
+        => Write(new(Guid.NewGuid(), module, result, TimeSpan.Zero));
+    public void Write(ShutdownEntry entry)
     {
         try
         {
@@ -20,7 +22,7 @@ public sealed class ShutdownLog(string directory)
                         if (File.Exists(source)) File.Move(source, path + "." + i, true);
                     }
                 }
-                File.AppendAllText(path, $"{DateTimeOffset.UtcNow:O} shutdown {module} {result}{Environment.NewLine}");
+                File.AppendAllText(path, FormattableString.Invariant($"{DateTimeOffset.UtcNow:O} shutdown {entry.Module} {entry.Result} id={entry.CorrelationId:N} elapsedMs={entry.Elapsed.TotalMilliseconds:F1} hresult={entry.HResult:X8}{Environment.NewLine}"));
             }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }

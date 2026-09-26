@@ -29,6 +29,11 @@
 | ADR-029 | 自启不进入可移植配置，单独读取真实登记 | 独立按钮只改当前用户单个 Run 值；登记不代表 Windows 实际一定启动；不同内容拒绝覆盖 |
 | ADR-030 | 全局热键默认空，不支持 Win/F12/PrintScreen | 显式用户选择 Ctrl/Alt 字母数字；MOD_NOREPEAT；冲突保留现有入口，失败释放不假报关闭 |
 | ADR-031 | B4b 没有验证白名单，原生切换维持禁用 | 补三角色只读快照和矩阵；未进行宿主写测试，不连接未经验证的默认设备写接口 |
+| ADR-032 | 用户授权 Git 版本管理 | 创建 codex/b5-release，B4 基线和 B5 分别提交；不推送远端，不跟踪 SDK/缓存/运行数据 |
+| ADR-033 | B5 打包必须匹配干净提交和构建收据 | 源码跟踪清单、包内 RELEASE.json、逐文件 SHA256；不把旧二进制和新源码混包 |
+| ADR-034 | 自包含下载失败不绕过 TLS、不伪称交付 | 本轮交付 FDD；准备脚本固定 runtime 10.0.12 并验证官方 SHA512，SCD 留阻塞项 |
+| ADR-035 | B5 假状态循环与真实性能严格区分 | 500 次循环仅验状态/调度；CPU/内存/DPI/休眠全部待授权真机验收 |
+| ADR-036 | 离线依赖盘点不等于漏洞或公开许可审核 | 12 个测试/构建包；旧许可元数据缺口、项目 LICENSE、在线审计和签名仍保留 |
 
 B4 依据：[RegisterHotKey](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-registerhotkey) 与 [Run/RunOnce 登记](https://learn.microsoft.com/en-us/windows/win32/setupapi/run-and-runonce-registry-keys)。本轮只核对官方接口语义，假接口测试不代表真实操作已验收。
 

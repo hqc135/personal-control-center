@@ -1,44 +1,34 @@
 # 个人控制中心
 
-2026-09-26 · **B4 第四轮候选 0.4.0**。
+2026-09-26 · **B5 第五轮候选 0.5.0**。当前为自用、框架依赖候选，**不是最终验收通过的正式版**。
 
-已实现 WPF 托盘、声音/静音、电源方案、临时保持唤醒、代理检测、快捷入口，以及配置迁移/恢复、模块排序与隐藏、可选全局快捷键、当前用户自启。**151 项非交互测试通过，Release 编译 0 警告/0 错误。真机与界面仍未验收。**
+声音/静音、电源、临时唤醒、代理检测、快捷入口、配置迁移恢复、模块设置、快捷键及用户自启已实现。默认音频输出切换仍降级到系统声音设置。
 
-用户游戏期间只做代码检查和测试；本轮没有启动应用或窗口，没有修改真实音频、电源、自启或快捷键，没有实际申请唤醒或代理探测。
+本轮 160 项非交互测试通过，Release 编译无警告/错误；修复唤醒线程异常导致命令悬挂，补显示/DPI 变化时面板重新定位、退出日志关联编号/耗时，并减少字体枚举。没有启动窗口、执行宿主控制或真实性能压测。
 
-## 资料
+## 交付与记录
 
-- [第四轮验收](docs/acceptance/B4.md)、[人工清单](docs/MANUAL_CHECKLIST_B4.md)
-- [配置与恢复](docs/CONFIGURATION_GUIDE.md)、[配置 schema](docs/config.schema.json)
-- [音频兼容门](docs/AUDIO_COMPATIBILITY.md)
-- [实施状态](docs/IMPLEMENTATION_STATUS.md)、[分批计划](docs/DELIVERY_PLAN.md)
-- [设计](docs/PRODUCT_DESIGN.md)、[架构](docs/ARCHITECTURE.md)、[决策](docs/DECISIONS.md)
+- [B5 验收与限制](docs/acceptance/B5.md)
+- [发布检查及待验收矩阵](docs/RELEASE_CHECKLIST.md)
+- [构建与 Git 回退](docs/RELEASE_GUIDE.md)
+- [配置说明](docs/CONFIGURATION_GUIDE.md)、[音频兼容门](docs/AUDIO_COMPATIBILITY.md)
+- [进度](docs/IMPLEMENTATION_STATUS.md)、[迭代计划](docs/DELIVERY_PLAN.md)
 
-## 构建
-
-项目内 .tools/dotnet SDK 10.0.401，不修改系统 PATH。依赖已恢复时：
+Git 分支 codex/b5-release，B4 基线已提交；B5 源码、构建收据和包内 RELEASE.json 关联同一提交。不推送远端，SDK、依赖缓存、构建和个人运行数据不进入 Git。
 
 ```powershell
+# 项目内 SDK 10.0.401，低优先级、单节点、不开窗口
 ./scripts/build.ps1 -Offline -Publish
+./scripts/dependency-inventory.ps1
+# 需源码已提交、工作区干净，并由当前提交构建
 ./scripts/package.ps1
+./scripts/verify-package.ps1
 ```
 
-构建采用低优先级、单节点，不启动应用。测试用假热键/注册表/唤醒/网络/音频/电源接口和临时目录。两个 tools 不随脚本执行；UiAcceptance 必须显式 --allow-ui 才弹出演示窗口。
+本轮交付 artifacts/PersonalControlCenter-B5-CANDIDATE-framework-dependent.zip 与 B5-source.zip。运行需要 Windows 11 x64 build 22621+ 和 .NET 10 Windows Desktop Runtime。--show / --tray；托盘右键退出，托盘失败时普通窗口提供退出。
 
-## 运行与边界
+自包含包所需 NuGet 下载连续 TLS 握手失败，未绕过证书校验；本轮**未生成自包含包**。后续网络恢复可显式运行 restore-runtime.ps1，再构建/打包 self-contained 模式；运行时仅放项目，不安装系统。
 
-方便时手动解压 artifacts/PersonalControlCenter-B4-CANDIDATE-framework-dependent.zip，运行 PersonalControlCenter.exe。需要 Windows 11 x64 build 22621+、.NET 10 Desktop Runtime x64；不是自包含包。--show / --tray；托盘右键退出，托盘失败时普通窗口可退出。
+真实 DPI/多屏、睡眠恢复、驱动、热键、自启、CPU/内存/句柄预算均待验收；500 次假状态循环不等于真实 UI 性能测试。项目许可证未决定，在线漏洞审计未完成，不公开发布。
 
-声音/静音和电源方案是真实控制；切方案可能影响亮度/睡眠。默认输出原生切换尚未通过兼容门，继续使用系统声音设置。
-
-保持唤醒需手动开始，1–480 分钟，可选屏幕常亮；不恢复上次活动请求，不清除其他程序请求。本机代理可见时最多每 10 秒检测一次、500 ms 超时；隐藏取消。手动网站目标默认空，用户点击才通过显式 HTTP 代理测试，5 秒预算，无 Cookie/凭据/自动重定向/TLS 绕过。
-
-设置支持模块排序/显示。导入与备份先进入草稿，保存才应用。便携迁移去掉本机/程序/网页入口、测试目标、快捷键和未知字段；程序信任始终本机独立确认。
-
-快捷键默认关，用户填写保存后注册，冲突保留原键和托盘。自启必须点独立按钮，只操作当前用户的本程序登记；不随配置导入或普通保存启用。遇到不同位置的同名登记不盲目覆盖。
-
-配置保存在 %LOCALAPPDATA%/PersonalControlCenter，最近 5 份备份；生命周期日志不含路径/网址/正文。退出后可删程序目录；启用过自启则先在原位置关闭。
-
-按用户要求删除旧 B1–B3 六个 ZIP，保留历史验收记录。旧发布/暂存目录递归清理被自动审批拒绝，暂留。最新交付为 B4；第五轮未开始。
-
-未签名自用候选，许可证待确认。未提交/推送 Git，未公开发布，不捆绑个人配置、字体或 SDK。
+旧包不作版本历史使用，以 Git 源码提交回退；历史证据保留。B1–B3 ZIP 已删除，旧发布/暂存目录此前清理被自动审批拒绝，暂留。

@@ -81,6 +81,8 @@ B3 实装：Core/Awake.cs 提供假时钟可测的状态机，Windows/AwakeServi
 
 ## 技术依据
 
+B5 增补：AwakeService 关闭时先拒绝待执行任务，生命周期锁保护队列结束/释放与并发提交。ShutdownEntry 提供退出 correlation ID、耗时与 HRESULT；日志观察者异常不得阻断后续清理。显示设置事件和 WPF OnDpiChanged 触发重新限制工作区，订阅随 App 退出释放。发布从干净 Git 提交生成构建收据、源码清单和包内哈希，区分 FDD 与未生成的 SCD。
+
 B4 增补：ConfigurationTransfer 为无副作用的便携草稿转换；ConfigFiles 限额读取/原子导出；IConfigRecovery 只读预览备份。模块顺序通过已有 WPF 卡片重排，不复制业务 ViewModel；协调器停止隐藏模块普通刷新。HotkeyController 由 UI 线程拥有，通过可替换后端先注册新键再释放旧键，冲突与释放失败独立处理。UserStartupService 不从配置自动装配写操作，只允许设置页独立按钮调用；对本用户单个 Run 值做前值比较与后值回读。AudioSwitchCapability 不受配置开启，真实切换继续降级。
 
 2026-09-26 已阅读官方资料，仅用于能力边界，不代表本机通过：

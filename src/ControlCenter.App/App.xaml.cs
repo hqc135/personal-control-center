@@ -76,7 +76,7 @@ public partial class App : Application
             catch (ServiceException ex) { model.Notice = ex.Message; }
             try
             {
-                tray = new(messageWindow.Handle, Path.Combine(AppContext.BaseDirectory, "Assets", "pcc.ico"), "个人控制中心 · 第四轮候选");
+                tray = new(messageWindow.Handle, Path.Combine(AppContext.BaseDirectory, "Assets", "pcc.ico"), "个人控制中心 · 第五轮候选");
                 tray.Toggle += () => panel.Toggle(tray); tray.Menu += ShowMenu;
             }
             catch (IOException) { model.Notice = "托盘不可用，请使用窗口菜单退出。"; }
@@ -85,6 +85,7 @@ public partial class App : Application
             if (!panel.CanHide) { panel.ShowInTaskbar = true; panel.ContextMenu = CreateMenu(); }
             instance.Listen(() => { if (!Dispatcher.HasShutdownStarted) Dispatcher.BeginInvoke(() => { if (!exiting) panel.Present(tray); }); });
             SystemEvents.UserPreferenceChanged += PreferenceChanged;
+            SystemEvents.DisplaySettingsChanged += DisplaySettingsChanged;
             SystemParameters.StaticPropertyChanged += SystemSettingChanged;
             if (!e.Args.Contains("--tray") || !panel.CanHide) panel.Present(tray);
         }
@@ -159,6 +160,10 @@ public partial class App : Application
     }
     private void PreferenceChanged(object sender, UserPreferenceChangedEventArgs e) => Dispatcher.BeginInvoke(() => ThemeManager.Apply(config.Appearance.Theme));
     private void SystemSettingChanged(object? sender, PropertyChangedEventArgs e) => Dispatcher.BeginInvoke(() => ThemeManager.Apply(config.Appearance.Theme));
+    private void DisplaySettingsChanged(object? sender, EventArgs e)
+    {
+        if (!Dispatcher.HasShutdownStarted) Dispatcher.BeginInvoke(() => { if (!exiting && panel?.IsVisible == true) panel.RefreshPlacement(); });
+    }
     private async void RequestExit()
     {
         if (exiting) return;
@@ -174,12 +179,13 @@ public partial class App : Application
             (ShutdownModule.Coordinator, () => coordinator?.DisposeAsync().AsTask() ?? Task.CompletedTask),
             (ShutdownModule.Audio, () => audio?.DisposeAsync().AsTask() ?? Task.CompletedTask),
             (ShutdownModule.Power, () => power?.DisposeAsync().AsTask() ?? Task.CompletedTask)
-        ], (module, result) => shutdownLog?.Write(module, result));
+        ], entry => shutdownLog?.Write(entry));
     });
     protected override void OnExit(ExitEventArgs e)
     {
         exiting = true; panel?.Model.Dispose();
         SystemEvents.UserPreferenceChanged -= PreferenceChanged; SystemParameters.StaticPropertyChanged -= SystemSettingChanged;
+        SystemEvents.DisplaySettingsChanged -= DisplaySettingsChanged;
         // Normal exit awaits cleanup asynchronously. Session shutdown uses a bounded last chance.
         try { StopServicesAsync().Wait(TimeSpan.FromSeconds(5)); } catch (AggregateException) { }
         hotkeys?.Dispose(); tray?.Dispose(); messageWindow?.Dispose(); instance?.Dispose(); panel?.Exit();

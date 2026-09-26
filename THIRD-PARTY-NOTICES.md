@@ -1,10 +1,15 @@
-# 第三方组件说明
+# 第三方组件与许可记录
 
-B2 framework-dependent 候选包仅包含本项目编译产物和自行绘制的托盘图标，不捆绑 .NET 运行时、字体或测试依赖。保留的 B1 历史包说明见其包内文件。
+B5 framework-dependent 包仅捆绑本项目编译产物、自绘托盘图标、文档及发布清单。无第三方运行 NuGet 包、测试依赖、字体或 SDK。运行需要 Microsoft .NET 10 Windows Desktop Runtime，由系统安装及其许可文件提供。
 
-运行需要 Microsoft .NET 10 Windows Desktop Runtime；微软 .NET 仓库采用 MIT 许可，组件的第三方声明由安装的运行时提供。运行时官方来源：https://dotnet.microsoft.com/download/dotnet/10.0
+本轮未获得自包含运行时包。若以后交付 self-contained，打包脚本必须复制两份 runtime pack 的 LICENSE.TXT/THIRD-PARTY-NOTICES.TXT；缺失则拒绝打包，不把本说明当作完整运行时许可附件。
 
-构建工具 .NET SDK 10.0.401 保留在项目 .tools/dotnet，其 LICENSE.txt 和 ThirdPartyNotices.txt 为工具自身许可；不进入演示 ZIP。
+离线核对本地 NuGet 元数据和锁文件共 12 项，详见包内 DEPENDENCIES.json：
+- Microsoft.NET.Test.Sdk、Microsoft.CodeCoverage、Microsoft.TestPlatform.ObjectModel/TestHost 18.10.1：MIT。
+- xunit 2.9.3、xunit.core/assert/extensibility.core/extensibility.execution 2.9.3、xunit.analyzers 1.18.0、xunit.runner.visualstudio 2.8.2：元数据标 Apache-2.0。
+- xunit.abstractions 2.0.3：旧元数据没有 SPDX license 字段，仅提供上游 licenseUrl；保留链接与元数据哈希，不从当前 master 内容推定旧版本许可。
 
-测试依赖版本固定于 csproj/packages.lock.json：Microsoft.NET.Test.Sdk 18.10.1、xunit 2.9.3、xunit.runner.visualstudio 2.8.2。它们不进入运行包；相应许可证与传递依赖见恢复后的 NuGet 包元数据和许可证文件。
+上述全部为构建/测试用途，不进入运行目录。SDK 10.0.401 位于 .tools/dotnet，自带 LICENSE.txt/ThirdPartyNotices.txt，不分发。
+
+在线漏洞审计未完成。项目自身 LICENSE 仍待用户确定版权所有者与授权条款；没有代替用户选择开源许可证，不能因此宣称已完成公开分发许可审核。
 

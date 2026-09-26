@@ -10,7 +10,9 @@ public sealed class ExecutionStateBackend : IAwakeBackend
 }
 public sealed class AwakeService : IAwakeService
 {
-    private readonly BlockingCollection<Action> queue = new();
+    private sealed record Work(Action Execute, Action<Exception> Reject);
+    private readonly BlockingCollection<Work> queue = new();
+    private readonly object lifecycle = new();
     private readonly AwakeSession session;
     private readonly Thread worker;
     private readonly TaskCompletionSource stopped = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -39,17 +41,24 @@ public sealed class AwakeService : IAwakeService
         {
             while (!queue.IsCompleted)
             {
-                if (queue.TryTake(out var action, session.Current.Status == AwakeStatus.Active ? 1000 : Timeout.Infinite)) action();
+                if (queue.TryTake(out var action, session.Current.Status == AwakeStatus.Active ? 1000 : Timeout.Infinite)) action.Execute();
                 session.Check(false); Publish();
             }
         }
         catch (Exception ex) { failure = ex; }
         finally
         {
+            lock (lifecycle) { disposed = 1; queue.CompleteAdding(); }
+            while (queue.TryTake(out var pending)) pending.Reject(failure ?? new ObjectDisposedException(nameof(AwakeService)));
             try { session.Stop(); Publish(); }
-            catch (Exception ex) { failure ??= ex; }
+            catch (Exception ex)
+            {
+                failure ??= ex;
+                Volatile.Write(ref current, Current with { Status = AwakeStatus.ReleaseUnconfirmed, Message = "唤醒线程已结束；清除结果未确认。" });
+            }
             finally
             {
+                lock (lifecycle) queue.Dispose();
                 if (failure is null) stopped.TrySetResult(); else stopped.TrySetException(failure);
             }
         }
@@ -57,9 +66,11 @@ public sealed class AwakeService : IAwakeService
     private Task<T> Invoke<T>(Func<T> action)
     {
         var completion = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
-        if (Volatile.Read(ref disposed) != 0) return Task.FromException<T>(new ObjectDisposedException(nameof(AwakeService)));
-        try { queue.Add(() => { try { var result = action(); Publish(); completion.SetResult(result); } catch (Exception ex) { completion.SetException(ex); } }); }
-        catch (InvalidOperationException) { completion.TrySetException(new ObjectDisposedException(nameof(AwakeService))); }
+        lock (lifecycle)
+        {
+            if (disposed != 0) return Task.FromException<T>(new ObjectDisposedException(nameof(AwakeService)));
+            queue.Add(new(() => { try { var result = action(); Publish(); completion.TrySetResult(result); } catch (Exception ex) { completion.TrySetException(ex); } }, ex => completion.TrySetException(ex)));
+        }
         return completion.Task;
     }
     public Task<CommandResult> StartAsync(int minutes, bool keepDisplay) => Invoke(() => session.Start(minutes, keepDisplay));
@@ -67,7 +78,7 @@ public sealed class AwakeService : IAwakeService
     public Task CheckAsync(bool resumed = false) => Invoke(() => { session.Check(resumed); return true; });
     public async ValueTask DisposeAsync()
     {
-        if (Interlocked.Exchange(ref disposed, 1) == 0) queue.CompleteAdding();
+        lock (lifecycle) { if (disposed == 0) { disposed = 1; queue.CompleteAdding(); } }
         await stopped.Task.WaitAsync(TimeSpan.FromSeconds(3));
         if (!worker.Join(TimeSpan.FromSeconds(1))) throw new TimeoutException("唤醒线程未及时结束。");
         if (Current.Status == AwakeStatus.ReleaseUnconfirmed)

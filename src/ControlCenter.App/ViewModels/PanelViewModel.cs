@@ -18,7 +18,7 @@ public sealed class PanelViewModel : INotifyPropertyChanged, IDisposable
     private readonly ShortcutCoordinator shortcuts;
     private readonly Action<Action> dispatch;
     private AppConfig config;
-    private string notice = "第四轮候选：控制操作需主动点击；不会自动保持唤醒或测试外网。";
+    private string notice = "第五轮候选：控制操作需主动点击；不会自动保持唤醒或测试外网。";
     private double volume;
     private bool devicesOpen, gestureActive, disposed;
     private string? gestureEndpoint;
@@ -26,7 +26,7 @@ public sealed class PanelViewModel : INotifyPropertyChanged, IDisposable
     private int pendingVolume;
     public event PropertyChangedEventHandler? PropertyChanged;
     public event Action? ShortcutSettingsRequested;
-    public string DataOriginLabel { get; init; } = "第四轮候选 · 真实系统状态";
+    public string DataOriginLabel { get; init; } = "第五轮候选 · 真实系统状态";
     public SessionViewModel? Session { get; }
     public IReadOnlyList<string> Modules => config.Modules;
     public string AudioSwitchExplanation => AudioSwitchCapability.Current.Explanation;

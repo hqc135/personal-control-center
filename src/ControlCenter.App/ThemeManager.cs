@@ -26,8 +26,8 @@ public static class ThemeManager
     }
     public static FontFamily PreferredFont()
     {
-        var installed = Fonts.SystemFontFamilies.Select(x => x.Source).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        return new FontFamily(installed.Contains("PingFang SC") ? "PingFang SC" : "Microsoft YaHei UI");
+        // WPF resolves installed fonts in order; opening settings need not enumerate all system fonts.
+        return new FontFamily("PingFang SC, Microsoft YaHei UI, Segoe UI");
     }
 }
 
