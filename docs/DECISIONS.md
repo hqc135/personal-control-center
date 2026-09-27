@@ -45,3 +45,7 @@ B2 技术依据：已核对 [Core Audio 主音量](https://learn.microsoft.com/e
 
 首次 SDK 命令自动生成了 ASP.NET 开发证书；已按本次时间与精确指纹删除，回读证书不存在。后续构建设置 DOTNET_GENERATE_ASPNET_CERTIFICATE=false。细节见 artifacts/evidence/sdk-certificate-cleanup.json。
 
+
+| ADR-037 | 配置草稿不得静默覆盖已观测的外部修改 | SHA256 修订检查与应用写入锁；冲突后显式重新载入，非协作编辑器仍存在最终替换竞争窗口 |
+| ADR-038 | 保存提交与清理分开报告 | 已提交后备份删除失败只警告；不可完整读取的原文件只读保护 |
+| ADR-039 | 设置异步结果依赖窗口生命周期 | 文件操作关闭取消并拒绝迟到结果；保存期间阻止普通关闭；应用退出后不再更新窗口 |

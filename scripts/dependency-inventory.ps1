@@ -1,7 +1,7 @@
 # Offline inventory from locked packages and locally restored NuGet metadata. No online vulnerability claim.
 $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path $PSScriptRoot -Parent)
-New-Item -ItemType Directory -Force artifacts/evidence/B5 | Out-Null
+New-Item -ItemType Directory -Force artifacts/evidence/B6 | Out-Null
 $items = @{}
 foreach ($lock in @(git ls-files '*packages.lock.json')) {
     $document = Get-Content -Raw -LiteralPath $lock | ConvertFrom-Json -AsHashtable
@@ -31,5 +31,5 @@ foreach ($lock in @(git ls-files '*packages.lock.json')) {
     GeneratedAt=(Get-Date -Format o); RuntimeThirdPartyPackages=@();
     VulnerabilityAudit='Not performed; offline inventory is not a vulnerability assessment.';
     Packages=@($items.Values | Sort-Object { $_.Id })
-} | ConvertTo-Json -Depth 6 | Set-Content artifacts/evidence/B5/dependencies.json -Encoding utf8
+} | ConvertTo-Json -Depth 6 | Set-Content artifacts/evidence/B6/dependencies.json -Encoding utf8
 Write-Output ('Locked packages inventoried: ' + $items.Count)

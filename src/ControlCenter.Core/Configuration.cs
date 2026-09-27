@@ -57,6 +57,8 @@ public static class ConfigCodec
     }
 }
 public sealed class FutureConfigException() : IOException("配置来自较新版本，已进入只读模式，不会覆盖原文件。");
+public sealed class ConfigConflictException() : IOException("配置已被其他操作修改；未覆盖新文件。请重新载入后再编辑。");
+public interface IConfigSaveStatus { string? LastSaveWarning { get; } }
 public sealed record ConfigLoadResult(AppConfig Config, string? Warning = null, bool ReadOnly = false);
 public interface IConfigRepository
 {

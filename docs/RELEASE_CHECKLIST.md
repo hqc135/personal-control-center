@@ -1,20 +1,20 @@
-# B5 发布检查与待验收矩阵
+# B6 发布检查与待验收矩阵
 
 结论：代码与非交互检查通过，正式发布门 **尚未通过**。用户仍在游戏期间，只授权代码检查与测试。
 
 | 门 | 本轮状态 | 证据或下一步 |
 |---|---|---|
 | Git 源码与版本 | 已纳入 Git；包关联干净提交 | RELEASE.json、SOURCE_COMMIT.txt |
-| Release / 测试 | 160 通过，0 警告/0 错误 | verification.log、unit-tests.trx |
+| Release / 测试 | 172 通过，0 警告/0 错误 | verification.log、unit-tests.trx |
 | 状态循环 | 500 次代理可见性循环无远端，500 次反转拒绝旧完成 | ReleaseRegressionTests |
 | 线程/清理错误路径 | 异常拒绝排队任务、重复退出、诊断失败不挡清理 | 假后端测试 |
 | DPI 计算边界 | 负坐标、1/1.35/2 倍缩放纯计算通过 | 不等于真实显示器测试 |
 | 发布文件 | 哈希/来源提交/源码 ZIP/运行依赖合同核对 | delivery-check.json |
-| 二次编译复现 | 项目 DLL/EXE 哈希比较 | reproducibility.json |
+| 二次编译复现 | B5 同目录比较通过；B6 未重复，不能外推 | B5/reproducibility.json |
 | 依赖许可清单 | 12 个构建/测试包离线盘点 | DEPENDENCIES.json |
 | 许可遗留 | xunit.abstractions 2.0.3 元数据仅旧 licenseUrl，无 SPDX；项目许可证未指定 | 不宣称已获公开发布许可 |
 | 在线漏洞审计 | 未完成 | 不用离线盘点声称无漏洞 |
-| 自包含 win-x64 | 受阻，未生成 | 官方包 GET TLS 失败，runtime-download-failure.txt |
+| 自包含 win-x64 | 受阻，未生成 | 官方包 GET TLS 失败，上一轮 B5/runtime-download-failure.txt |
 | 音频输出切换 | 禁用/系统设置降级 | AUDIO_COMPATIBILITY.md |
 | 真机正确性 | 全部相应人工项待执行 | 前四轮人工清单 |
 | 高对比度/键盘/读屏/DPI/多屏 | 未执行 | 安排窗口验收时检查 |

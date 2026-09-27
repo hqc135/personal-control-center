@@ -9,7 +9,7 @@ $env:DOTNET_CLI_HOME = Join-Path (Get-Location) '.tools/cli-home'
 $env:NUGET_PACKAGES = Join-Path (Get-Location) '.tools/packages'
 $dotnet = Join-Path (Get-Location) '.tools/dotnet/dotnet.exe'
 if (!(Test-Path $dotnet)) { throw 'Project-local SDK is missing; see global.json.' }
-New-Item -ItemType Directory -Force artifacts/evidence/B5 | Out-Null
+New-Item -ItemType Directory -Force artifacts/evidence/B6 | Out-Null
 if ($SelfContained) {
     foreach ($id in @('microsoft.windowsdesktop.app.runtime.win-x64','microsoft.netcore.app.runtime.win-x64')) {
         $path = '.tools/runtime-feed/' + $id + '.10.0.12.nupkg'
@@ -22,11 +22,11 @@ if (!$Offline) {
 }
 & $dotnet build ControlCenter.slnx -c Release --no-restore -m:1 -p:UseSharedCompilation=false
 if ($LASTEXITCODE) { throw 'Build failed' }
-& $dotnet test tests/ControlCenter.Tests -c Release --no-build --logger 'trx;LogFileName=unit-tests.trx' --results-directory artifacts/evidence/B5
+& $dotnet test tests/ControlCenter.Tests -c Release --no-build --logger 'trx;LogFileName=unit-tests.trx' --results-directory artifacts/evidence/B6
 if ($LASTEXITCODE) { throw 'Tests failed' }
 if ($Publish) {
     $mode = if ($SelfContained) { 'self-contained' } else { 'framework-dependent' }
-    $output = 'artifacts/B5-CANDIDATE-' + $mode
+    $output = 'artifacts/B6-CANDIDATE-' + $mode
     if ($SelfContained) {
         & $dotnet publish src/ControlCenter.App -c Release -r win-x64 --self-contained true --source .tools/runtime-feed --source .tools/packages -p:NuGetAudit=false -p:RestorePackagesWithLockFile=false -p:RuntimeFrameworkVersion=10.0.12 -p:PublishTrimmed=false -p:PublishReadyToRun=false -m:1 -p:UseSharedCompilation=false -o $output
     } else {
@@ -38,6 +38,6 @@ if ($Publish) {
         Files=@(Get-ChildItem -LiteralPath $output -File -Recurse | ForEach-Object {
             [ordered]@{Path=[IO.Path]::GetRelativePath((Join-Path (Get-Location) $output), $_.FullName); SHA256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash}
         })
-    } | ConvertTo-Json -Depth 5 | Set-Content ('artifacts/evidence/B5/build-' + $mode + '.json') -Encoding utf8
+    } | ConvertTo-Json -Depth 5 | Set-Content ('artifacts/evidence/B6/build-' + $mode + '.json') -Encoding utf8
 }
 

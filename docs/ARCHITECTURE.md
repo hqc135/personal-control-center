@@ -90,3 +90,5 @@ B4 增补：ConfigurationTransfer 为无副作用的便携草稿转换；ConfigF
 - [WPF 概览](https://learn.microsoft.com/en-us/dotnet/desktop/wpf/overview/)：Windows 桌面 UI、绑定、布局、动画。
 - [IAudioEndpointVolume](https://learn.microsoft.com/en-us/windows/win32/api/endpointvolume/nn-endpointvolume-iaudioendpointvolume)：端点音量、静音与通知。
 - [SetThreadExecutionState](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-setthreadexecutionstate)：线程请求与清除、主动睡眠限制。
+
+B6 增补：JsonConfigRepository 用实例 SemaphoreSlim、文件共享锁和 SHA256 修订检测保护配置写入；IConfigSaveStatus 区分提交失败与提交后清理警告。OperationLifetime 为设置文件操作提供单操作令牌、关闭取消及迟到结果过滤。设置保存与重新读取在工作线程执行磁盘操作，UI 更新回到 Dispatcher。外部非协作写入在最终检查与替换之间仍有竞争窗口。

@@ -32,6 +32,8 @@ Title="设置 · 个人控制中心" Width="480" Height="670" MinHeight="420" Wi
 <TextBlock x:Name="ProxyEntryLabel" Margin="0,4"/>
 <WrapPanel><Button Content="绑定所选入口" Click="BindProxy_Click" Margin="0,0,8,0"/><Button Content="清除绑定" Click="ClearProxy_Click"/></WrapPanel>
 <TextBlock Text="配置迁移与恢复" FontWeight="SemiBold" Margin="0,20,0,8"/>
+<Button Content="重新载入当前配置" Click="Reload_Click" Margin="0,0,0,8"/>
+<TextBlock Text="文件被外部修改时保存会停止；重新载入会替换未保存的草稿，保存后才应用到面板。" Style="{StaticResource Secondary}" TextWrapping="Wrap" Margin="0,0,0,8"/>
 <TextBlock Text="导入仅填入草稿，保存后生效。便携导入/导出不携带本机路径、网页入口、测试目标、快捷键或程序信任；这些项目需在本机重新配置。" Style="{StaticResource Secondary}" TextWrapping="Wrap"/>
 <WrapPanel Margin="0,8"><Button Content="导入草稿" Click="Import_Click" Margin="0,0,8,0"/><Button Content="导出便携配置" Click="Export_Click"/></WrapPanel>
 <ComboBox x:Name="BackupList" DisplayMemberPath="Id" AutomationProperties.Name="本机配置备份"/>

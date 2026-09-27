@@ -6,8 +6,8 @@ Set-Location (Split-Path $PSScriptRoot -Parent)
 $workspace = (Get-Location).Path
 $commit = git rev-parse HEAD
 if ($LASTEXITCODE -or @(git status --porcelain).Count) { throw 'Commit all source changes before packaging.' }
-$published = Join-Path $workspace ('artifacts/B5-CANDIDATE-' + $Mode)
-$receipt = Get-Content -Raw ('artifacts/evidence/B5/build-' + $Mode + '.json') | ConvertFrom-Json
+$published = Join-Path $workspace ('artifacts/B6-CANDIDATE-' + $Mode)
+$receipt = Get-Content -Raw ('artifacts/evidence/B6/build-' + $Mode + '.json') | ConvertFrom-Json
 if ($receipt.Dirty -or $receipt.Commit -ne $commit -or $receipt.Mode -ne $Mode) { throw 'Build does not match clean HEAD; rebuild.' }
 foreach ($entry in $receipt.Files) {
     if ((Get-FileHash -LiteralPath (Join-Path $published $entry.Path) -Algorithm SHA256).Hash -ne $entry.SHA256) { throw ('Published output changed: ' + $entry.Path) }
@@ -26,7 +26,7 @@ foreach ($file in Get-ChildItem -LiteralPath $published -File -Recurse) {
 }
 Copy-Item -LiteralPath 'docs/PACKAGE_README.md' -Destination (Join-Path $release 'README.md')
 Copy-Item -LiteralPath 'LICENSE','THIRD-PARTY-NOTICES.md','docs/config.schema.json','docs/CONFIGURATION_GUIDE.md','docs/AUDIO_COMPATIBILITY.md','docs/RELEASE_CHECKLIST.md' -Destination $release
-Copy-Item -LiteralPath 'artifacts/evidence/B5/dependencies.json' -Destination (Join-Path $release 'DEPENDENCIES.json')
+Copy-Item -LiteralPath 'artifacts/evidence/B6/dependencies.json' -Destination (Join-Path $release 'DEPENDENCIES.json')
 if ($Mode -eq 'self-contained') {
     $licenses = Join-Path $release 'runtime-notices'
     New-Item -ItemType Directory -Force $licenses | Out-Null
@@ -46,17 +46,17 @@ $manifest = @(foreach ($relative in @(git -c core.quotepath=false ls-files)) {
     Copy-Item -LiteralPath $relative -Destination $destination
     [PSCustomObject]@{Path=$relative; SHA256=(Get-FileHash -LiteralPath $relative -Algorithm SHA256).Hash}
 })
-$manifest | ConvertTo-Json | Set-Content artifacts/evidence/B5/source-manifest.json -Encoding utf8
+$manifest | ConvertTo-Json | Set-Content artifacts/evidence/B6/source-manifest.json -Encoding utf8
 $commit | Set-Content -LiteralPath (Join-Path $source 'SOURCE_COMMIT.txt') -Encoding ascii
 $payload = @(Get-ChildItem -LiteralPath $release -File -Recurse | ForEach-Object {
     [ordered]@{Path=[IO.Path]::GetRelativePath($release,$_.FullName); SHA256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash}
 })
-[ordered]@{Version='0.5.0';Commit=$commit;Mode=$Mode;Acceptance='Noninteractive only; real-machine acceptance pending';Files=$payload} |
+[ordered]@{Version='0.6.0';Commit=$commit;Mode=$Mode;Acceptance='Noninteractive only; real-machine acceptance pending';Files=$payload} |
     ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $release 'RELEASE.json') -Encoding utf8
-$zip = 'artifacts/PersonalControlCenter-B5-CANDIDATE-' + $Mode + '.zip'
+$zip = 'artifacts/PersonalControlCenter-B6-CANDIDATE-' + $Mode + '.zip'
 Compress-Archive -Path (Join-Path $release '*') -DestinationPath $zip -Force
-Compress-Archive -Path (Join-Path $source '*') -DestinationPath artifacts/PersonalControlCenter-B5-source.zip -Force
-Get-FileHash -Algorithm SHA256 -LiteralPath $zip,'artifacts/PersonalControlCenter-B5-source.zip','artifacts/evidence/B5/source-manifest.json' |
-    ForEach-Object { $_.Hash + '  ' + (Split-Path $_.Path -Leaf) } | Set-Content ('artifacts/B5-' + $Mode + '-SHA256.txt') -Encoding utf8
-Get-Content ('artifacts/B5-' + $Mode + '-SHA256.txt')
+Compress-Archive -Path (Join-Path $source '*') -DestinationPath artifacts/PersonalControlCenter-B6-source.zip -Force
+Get-FileHash -Algorithm SHA256 -LiteralPath $zip,'artifacts/PersonalControlCenter-B6-source.zip','artifacts/evidence/B6/source-manifest.json' |
+    ForEach-Object { $_.Hash + '  ' + (Split-Path $_.Path -Leaf) } | Set-Content ('artifacts/B6-' + $Mode + '-SHA256.txt') -Encoding utf8
+Get-Content ('artifacts/B6-' + $Mode + '-SHA256.txt')
 

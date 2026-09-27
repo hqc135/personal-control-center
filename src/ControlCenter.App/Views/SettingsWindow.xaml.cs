@@ -11,15 +11,18 @@ public partial class SettingsWindow : Window
     private readonly IShortcutTrustStore trust;
     private AppConfig original;
     private readonly ObservableCollection<ShortcutDefinition> shortcuts;
-    private readonly bool readOnly;
+    private bool readOnly;
     private bool ready, dirty, accepted;
     private string? proxyShortcutId;
     private readonly ObservableCollection<ModuleOption> modules = [];
     private readonly UserStartupService? startup;
     private StartupSnapshot? startupSnapshot;
     private bool saving;
+    private readonly OperationLifetime fileOperation = new();
+    private bool closing;
     public AppConfig? Saved { get; private set; }
-    public SettingsWindow(IConfigRepository repository, AppConfig config, bool readOnly, IShortcutTrustStore trust, UserStartupService? startup = null, string? hotkeyStatus = null)
+    public string? SavedWarning { get; private set; }
+    public SettingsWindow(IConfigRepository repository, AppConfig config, bool readOnly, IShortcutTrustStore trust, UserStartupService? startup = null, string? hotkeyStatus = null, string? configWarning = null)
     {
         this.repository = repository; original = config; this.trust = trust; this.readOnly = readOnly;
         InitializeComponent();
@@ -32,8 +35,10 @@ public partial class SettingsWindow : Window
         Loaded += async (_, _) => await LoadLocalOptionsAsync();
         SaveButton.IsEnabled = !readOnly;
         StartupButtons.IsEnabled = !readOnly && startup is not null;
-        if (readOnly) Status.Text = "较新版本配置受保护，本轮不能覆盖。";
+        if (configWarning is not null) Status.Text = configWarning;
+        else if (readOnly) Status.Text = "当前配置受只读保护，请修复后重新载入。";
         ready = true;
+        Closed += (_, _) => { closing = true; fileOperation.Dispose(); };
     }
     private void LoadDraft(AppConfig config)
     {
@@ -68,10 +73,11 @@ public partial class SettingsWindow : Window
     {
         if (readOnly || saving) return;
         saving = true; IsEnabled = false;
-        try { var config = ReadDraft(); await repository.SaveAsync(config); Saved = config; accepted = true; Close(); }
-        catch (InvalidDataException ex) { Status.Text = ex.Message; SaveButton.IsEnabled = true; }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Status.Text = "保存失败，旧配置或备份保留；请检查目录权限与输入。"; SaveButton.IsEnabled = true; }
-        finally { saving = false; IsEnabled = true; }
+        try { var config = ReadDraft(); await Task.Run(() => repository.SaveAsync(config)); if (closing) return; Saved = config; SavedWarning = (repository as IConfigSaveStatus)?.LastSaveWarning; accepted = true; Close(); }
+        catch (ConfigConflictException ex) { if (closing) return; Status.Text = ex.Message; SaveButton.IsEnabled = true; }
+        catch (InvalidDataException ex) { if (closing) return; Status.Text = ex.Message; SaveButton.IsEnabled = true; }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { if (closing) return; Status.Text = "保存失败，旧配置或备份保留；请检查目录权限与输入。"; SaveButton.IsEnabled = true; }
+        finally { saving = false; if (!closing) IsEnabled = true; }
     }
     private void Add_Click(object sender, RoutedEventArgs e)
     {
@@ -106,8 +112,8 @@ public partial class SettingsWindow : Window
         var preview = "目标：" + selected.Target + "\n工作目录：" + (selected.WorkingDirectory ?? "程序所在目录") +
             "\n参数（每行一个）：" + "\n" + string.Join("\n", selected.Arguments ?? []) + "\n\n只确认此入口，不会立即启动。是否继续？";
         if (MessageBox.Show(this, preview, "核对程序入口", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
-        try { await trust.ConfirmAsync(selected, CancellationToken.None); Status.Text = "本机已确认此目标与参数；入口配置仍需保存。"; }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Status.Text = "本机确认记录保存失败，程序仍不可启动。"; }
+        try { await trust.ConfirmAsync(selected, CancellationToken.None); if (closing) return; Status.Text = "本机已确认此目标与参数；入口配置仍需保存。"; }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException) { if (!closing) Status.Text = "本机确认记录保存失败，程序仍不可启动。"; }
     }
     private void Cancel_Click(object sender, RoutedEventArgs e) => Close();
     private void ModuleUp_Click(object sender, RoutedEventArgs e) => MoveModule(-1);
@@ -123,11 +129,16 @@ public partial class SettingsWindow : Window
     {
         try
         {
-            if (repository is IConfigRecovery recovery) BackupList.ItemsSource = await recovery.ListBackupsAsync();
-            if (startup is not null) { startupSnapshot = await Task.Run(startup.Read); StartupStatus.Text = startupSnapshot.Message; }
+            if (repository is IConfigRecovery recovery)
+            {
+                var backups = await Task.Run(() => recovery.ListBackupsAsync());
+                if (closing) return;
+                BackupList.ItemsSource = backups;
+            }
+            if (startup is not null) { var snapshot = await Task.Run(startup.Read); if (closing) return; startupSnapshot = snapshot; StartupStatus.Text = snapshot.Message; }
             else StartupStatus.Text = "本模式不提供真实自启操作。";
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException) { StartupStatus.Text = "本机选项读取失败；未修改任何登记。"; }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or System.Security.SecurityException) { if (!closing) StartupStatus.Text = "本机选项读取失败；未修改任何登记。"; }
     }
     private static string ConfigError(Exception ex) => ex is System.Text.Json.JsonException json
         ? $"JSON 格式错误，行 {json.LineNumber + 1}，位置 {json.BytePositionInLine + 1}。原配置未修改。"
@@ -138,26 +149,56 @@ public partial class SettingsWindow : Window
         if (readOnly) return;
         var dialog = new OpenFileDialog { Filter = "JSON 配置|*.json", CheckFileExists = true };
         if (dialog.ShowDialog(this) != true) return;
-        try
+        await RunFileOperationAsync(async token =>
         {
-            var preview = ConfigurationTransfer.Preview(await ConfigFiles.ReadAsync(dialog.FileName));
+            var preview = ConfigurationTransfer.Preview(await ConfigFiles.ReadAsync(dialog.FileName, token));
+            if (!fileOperation.CanApply(token)) return;
             LoadDraft(preview.Config); dirty = true;
             Status.Text = $"已载入导入草稿，移除 {preview.RemovedLocalEntries} 个需重新配置的入口；快捷键和测试目标已清空。尚未保存。";
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException or InvalidOperationException or FormatException) { Status.Text = ConfigError(ex); }
+        });
     }
     private async void Export_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new SaveFileDialog { Filter = "JSON 配置|*.json", FileName = "PersonalControlCenter.portable.json", AddExtension = true };
         if (dialog.ShowDialog(this) != true) return;
-        try { await ConfigFiles.ExportAsync(dialog.FileName, ReadDraft()); Status.Text = "便携配置已导出；本机路径、网页、快捷键和信任未导出。"; }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Status.Text = ConfigError(ex); }
+        await RunFileOperationAsync(async token =>
+        {
+            await ConfigFiles.ExportAsync(dialog.FileName, ReadDraft(), token);
+            if (fileOperation.CanApply(token)) Status.Text = "便携配置已导出；本机路径、网页、快捷键和信任未导出。";
+        });
     }
     private async void Restore_Click(object sender, RoutedEventArgs e)
     {
         if (readOnly || repository is not IConfigRecovery recovery || BackupList.SelectedItem is not ConfigBackup backup) return;
-        try { LoadDraft(await recovery.ReadBackupAsync(backup.Id)); dirty = true; Status.Text = "本机备份已读入草稿，检查后保存才生效；尚未执行系统操作。"; }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException or InvalidOperationException or FormatException) { Status.Text = ConfigError(ex); }
+        await RunFileOperationAsync(async token =>
+        {
+            var draft = await recovery.ReadBackupAsync(backup.Id, token);
+            if (!fileOperation.CanApply(token)) return;
+            LoadDraft(draft); dirty = true; Status.Text = "本机备份已读入草稿，检查后保存才生效；尚未执行系统操作。";
+        });
+    }
+    private async Task RunFileOperationAsync(Func<CancellationToken, Task> action)
+    {
+        var token = fileOperation.TryBegin();
+        if (token is null) return;
+        IsEnabled = false;
+        try { await action(token.Value); }
+        catch (OperationCanceledException) { }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or System.Text.Json.JsonException or InvalidOperationException or FormatException)
+        { if (fileOperation.CanApply(token.Value)) Status.Text = ConfigError(ex); }
+        finally { fileOperation.Complete(token.Value); if (!closing) IsEnabled = true; }
+    }
+    private async void Reload_Click(object sender, RoutedEventArgs e)
+    {
+        if (dirty && MessageBox.Show(this, "重新载入会放弃未保存的草稿，继续？", "重新载入配置", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+        await RunFileOperationAsync(async token =>
+        {
+            var loaded = await Task.Run(() => repository.LoadAsync(token), token);
+            if (!fileOperation.CanApply(token)) return;
+            readOnly = loaded.ReadOnly; LoadDraft(loaded.Config); dirty = false;
+            SaveButton.IsEnabled = !readOnly; StartupButtons.IsEnabled = !readOnly && startup is not null;
+            Status.Text = loaded.Warning ?? "已读取当前文件；保存后才应用到面板。";
+        });
     }
     private async void EnableStartup_Click(object sender, RoutedEventArgs e) => await SetStartupAsync(true);
     private async void DisableStartup_Click(object sender, RoutedEventArgs e) => await SetStartupAsync(false);
@@ -169,12 +210,13 @@ public partial class SettingsWindow : Window
         {
             var result = await Task.Run(() => startup.Set(enabled, startupSnapshot));
             startupSnapshot = await Task.Run(startup.Read);
+            if (closing) return;
             StartupStatus.Text = (result.Message ?? "操作结果待确认。") + " " + startupSnapshot.Message;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException) { StartupStatus.Text = "自启操作未确认，请刷新登记状态。"; }
-        finally { StartupButtons.IsEnabled = true; }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or System.Security.SecurityException) { if (!closing) StartupStatus.Text = "自启操作未确认，请刷新登记状态。"; }
+        finally { if (!closing) StartupButtons.IsEnabled = !readOnly; }
     }
-    public void PrepareForExit() { accepted = true; IsEnabled = false; }
+    public void PrepareForExit() { accepted = true; closing = true; fileOperation.Dispose(); IsEnabled = false; }
     protected override void OnClosing(CancelEventArgs e)
     {
         if (saving && !accepted) { e.Cancel = true; return; }

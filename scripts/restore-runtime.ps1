@@ -3,7 +3,7 @@ $ErrorActionPreference = 'Stop'
 [System.Diagnostics.Process]::GetCurrentProcess().PriorityClass = 'BelowNormal'
 Set-Location (Split-Path $PSScriptRoot -Parent)
 if ($Version -notmatch '^\d+\.\d+\.\d+$') { throw 'Invalid runtime version' }
-New-Item -ItemType Directory -Force .tools/runtime-feed,artifacts/evidence/B5 | Out-Null
+New-Item -ItemType Directory -Force .tools/runtime-feed,artifacts/evidence/B6 | Out-Null
 $receipts = @()
 foreach ($id in @('microsoft.windowsdesktop.app.runtime.win-x64','microsoft.netcore.app.runtime.win-x64')) {
     $file = Join-Path (Get-Location) ('.tools/runtime-feed/' + $id + '.' + $Version + '.nupkg')
@@ -18,6 +18,6 @@ foreach ($id in @('microsoft.windowsdesktop.app.runtime.win-x64','microsoft.netc
     try { $actual = [Convert]::ToBase64String([Security.Cryptography.SHA512]::HashData($stream)) } finally { $stream.Dispose() }
     if ($actual -ne $declared) { throw 'Runtime package SHA512 mismatch' }
     $receipts += [pscustomobject]@{ Package=$id; Version=$Version; Source=$url; Bytes=(Get-Item $file).Length; SHA512=$actual; Verified=$true }
-    $receipts | ConvertTo-Json | Set-Content artifacts/evidence/B5/runtime-downloads.json -Encoding utf8
+    $receipts | ConvertTo-Json | Set-Content artifacts/evidence/B6/runtime-downloads.json -Encoding utf8
     Write-Output ($id + ' SHA512 verified')
 }

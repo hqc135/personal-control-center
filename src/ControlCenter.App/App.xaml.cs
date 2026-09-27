@@ -30,7 +30,7 @@ public partial class App : Application
     private UserStartupService? startup;
     private string hotkeyStatus = "本会话未注册快捷键。";
     private AppConfig config = new();
-    private bool readOnly, exiting;
+    private bool readOnly, exiting, openingSettings;
     private Task? stopServices;
     protected override async void OnStartup(StartupEventArgs e)
     {
@@ -76,7 +76,7 @@ public partial class App : Application
             catch (ServiceException ex) { model.Notice = ex.Message; }
             try
             {
-                tray = new(messageWindow.Handle, Path.Combine(AppContext.BaseDirectory, "Assets", "pcc.ico"), "个人控制中心 · 第五轮候选");
+                tray = new(messageWindow.Handle, Path.Combine(AppContext.BaseDirectory, "Assets", "pcc.ico"), "个人控制中心 · 第六轮候选");
                 tray.Toggle += () => panel.Toggle(tray); tray.Menu += ShowMenu;
             }
             catch (IOException) { model.Notice = "托盘不可用，请使用窗口菜单退出。"; }
@@ -127,15 +127,22 @@ public partial class App : Application
         panel.SuppressDismiss = true;
         var menu = CreateMenu();
         NativeWindow.Foreground(messageWindow.Handle); menu.Placement = PlacementMode.MousePoint;
-        menu.Closed += (_, _) => { panel.SuppressDismiss = settings is not null; if (!panel.IsActive && settings is null) panel.Dismiss(); };
+        menu.Closed += (_, _) => { panel.SuppressDismiss = settings is not null || openingSettings; if (!panel.IsActive && settings is null && !openingSettings) panel.Dismiss(); };
         menu.IsOpen = true;
     }
-    private void ShowSettings()
+    private async void ShowSettings()
     {
-        if (panel is null || repository is null || trust is null || exiting) return;
+        if (panel is null || repository is null || trust is null || exiting || openingSettings) return;
         if (settings is not null) { settings.Activate(); return; }
+        openingSettings = true;
         panel.SuppressDismiss = true;
-        settings = new(repository, config, readOnly, trust, startup, hotkeyStatus);
+        ConfigLoadResult loaded;
+        try { loaded = await Task.Run(() => repository.LoadAsync()); }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
+        { panel.Model.Notice = "当前配置读取失败，未打开可覆盖原文件的设置草稿。"; panel.SuppressDismiss = false; return; }
+        finally { openingSettings = false; }
+        if (exiting) return;
+        settings = new(repository, loaded.Config, loaded.ReadOnly, trust, startup, hotkeyStatus, loaded.Warning);
         settings.Closed += (_, _) =>
         {
             if (exiting) return;
@@ -144,6 +151,7 @@ public partial class App : Application
                 config = saved; ThemeManager.Apply(config.Appearance.Theme);
                 panel.MotionEnabled = config.Appearance.Motion != "off"; panel.Model.UpdateConfig(config);
                 ApplyHotkey();
+                if (settings?.SavedWarning is { } warning) panel.Model.Notice = warning;
             }
             settings = null; panel.SuppressDismiss = false; panel.Present(tray);
         };

@@ -1,12 +1,12 @@
 # 构建、验证与 Git 回退
 
-B5 / 0.5.0。项目 SDK 固定 10.0.401，.tools/dotnet，不改变系统 PATH。普通构建使用 Release、单 MSBuild 节点、BelowNormal、关闭共享编译；不会启动应用。测试不调用宿主音频、电源、热键、Run 登记、唤醒或网络接口。
+B6 / 0.6.0。项目 SDK 固定 10.0.401，.tools/dotnet，不改变系统 PATH。普通构建使用 Release、单 MSBuild 节点、BelowNormal、关闭共享编译；不会启动应用。测试不调用宿主音频、电源、热键、Run 登记、唤醒或网络接口。
 
 ## 框架依赖候选
 
 1. 新机器先安装/准备固定 SDK 并按锁文件恢复；本工作区依赖已缓存，可直接 -Offline。
 2. 完成源码修改，检查 Git diff，提交。打包要求干净工作区。
-3. scripts/build.ps1 -Offline -Publish；构建、160 项测试与发布连续执行。
+3. scripts/build.ps1 -Offline -Publish；构建、172 项测试与发布连续执行。
 4. scripts/dependency-inventory.ps1：本地锁文件与 NuGet 元数据清单。
 5. scripts/package.ps1；scripts/verify-package.ps1。
 
@@ -31,7 +31,7 @@ scripts/restore-runtime.ps1 显式限速 512 KiB/s，从官方 NuGet 下载两�
 
 ## 源码回退
 
-B4 基线提交为 744b804；B5 提交由 RELEASE.json 和 Git 历史确定。先保存当前工作，可用 git log --oneline 查看历史，在单独 worktree/新分支构建旧提交；不需要保存每一轮 ZIP。不要硬重置或清理用户未提交修改。
+B4 基线提交为 744b804；B6 提交由 RELEASE.json 和 Git 历史确定。先保存当前工作，可用 git log --oneline 查看历史，在单独 worktree/新分支构建旧提交；不需要保存每一轮 ZIP。不要硬重置或清理用户未提交修改。
 
 源码回退不回退 Windows 音量/方案/自启，也不强行降级高版本用户配置。移动/删除已启用自启的安装目录前，先在原位置关闭本程序自启。配置和最近 5 份备份仍独立保留。
 
