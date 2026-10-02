@@ -1,14 +1,15 @@
+using System.IO;
 using System.Windows;
 using ControlCenter.App.Views;
 using ControlCenter.App.ViewModels;
 using ControlCenter.Core;
-// Explicitly interactive, excluded from ordinary build/test scripts. Never run while the user is gaming.
+// Explicitly interactive, excluded from ordinary build/test scripts. Requires explicit UI authorization.
 internal static class Program
 {
     [STAThread]
     private static int Main(string[] args)
     {
-        if (args.Length != 1 || args[0] != "--allow-ui")
+        if (args.Length is < 1 or > 2 || args[0] != "--allow-ui")
         { Console.Error.WriteLine("This tool opens a window. Run only with explicit UI-test authorization and --allow-ui."); return 2; }
         var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("pack://application:,,,/PersonalControlCenter;component/Themes/Controls.xaml") });
@@ -29,9 +30,86 @@ internal static class Program
         };
         panel.ExitRequested += () => { panel.Exit(); app.Shutdown(); };
         panel.Present();
+        if (args.Length == 2)
+        {
+            app.Dispatcher.InvokeAsync(async () =>
+            {
+                try
+                {
+                    Directory.CreateDirectory(args[1]);
+                    await Task.Delay(700);
+                    foreach (var theme in new[] { "light", "dark" })
+                    {
+                        ControlCenter.App.ThemeManager.Apply(theme);
+                        panel.UpdateLayout();
+                        Capture(panel, Path.Combine(args[1], theme + "-panel.png"));
+                        var settings = new SettingsWindow(new MemoryConfig(config), config, false, new MemoryTrust());
+                        settings.Show(); await Task.Delay(150); settings.UpdateLayout();
+                        Capture(settings, Path.Combine(args[1], theme + "-settings-top.png"));
+                        var combo = (System.Windows.Controls.ComboBox)settings.FindName("BackupList");
+                        combo.ItemsSource = new[] { new ConfigBackup("config-202610020001.json", DateTime.UtcNow), new ConfigBackup("config-202610020002.json", DateTime.UtcNow) };
+                        combo.SelectedIndex = 0;
+                        combo.IsDropDownOpen = true; await Task.Delay(100);
+                        var popup = (System.Windows.Controls.Primitives.Popup)combo.Template.FindName("PART_Popup", combo);
+                        if (!popup.IsOpen || popup.Child is not FrameworkElement { ActualHeight: > 0 }) throw new Exception("Backup dropdown did not open");
+                        combo.SelectedIndex = 1; combo.IsDropDownOpen = false;
+                        if (combo.Text != "config-202610020002.json") throw new Exception("Backup selection label incorrect");
+                        var save = (System.Windows.Controls.Button)settings.FindName("SaveButton");
+                        var before = save.TranslatePoint(new Point(), settings);
+                        foreach (var scroll in Descendants(settings).OfType<System.Windows.Controls.ScrollViewer>()) scroll.ScrollToEnd();
+                        settings.UpdateLayout();
+                        var after = save.TranslatePoint(new Point(), settings);
+                        if (before != after || after.Y + save.ActualHeight > settings.ActualHeight) throw new Exception("Save footer moved or clipped");
+                        Capture(settings, Path.Combine(args[1], theme + "-settings.png"));
+                        settings.Width = 440; settings.Height = 420; settings.UpdateLayout();
+                        var smallPosition = save.TranslatePoint(new Point(), settings);
+                        if (smallPosition.Y < 0 || smallPosition.Y + save.ActualHeight > settings.ActualHeight - 20) throw new Exception("Small window footer clipped");
+                        var size = save.DesiredSize; save.Focus(); settings.UpdateLayout();
+                        if (save.DesiredSize != size) throw new Exception("Keyboard focus changed button size");
+                        Capture(settings, Path.Combine(args[1], theme + "-settings-small.png"));
+                        settings.PrepareForExit(); settings.Close();
+                    }
+                    model.Mute.Execute(null); await Task.Delay(100);
+                    if (!(await audio.ReadLevelAsync("fake", CancellationToken.None)).Muted) throw new Exception("Mute did not reach fake audio");
+                    session.Start.Execute("30"); await Task.Delay(100);
+                    session.Stop.Execute(null); await Task.Delay(100);
+                    File.WriteAllText(Path.Combine(args[1], "result.txt"), "PASS: light/dark rendered; save footer stationary during scrolling and visible at 440x420; keyboard focus preserves button size; backup popup opens and selection label updates; mute reached fake audio; awake start/stop commands exercised; fake services only.");
+                }
+                catch (Exception ex) { File.WriteAllText(Path.Combine(args[1], "result.txt"), "FAIL: " + ex); Environment.ExitCode = 1; }
+                finally { panel.Exit(); app.Shutdown(); }
+            });
+        }
         app.Run();
         coordinator.DisposeAsync().AsTask().GetAwaiter().GetResult();
-        return 0;
+        return Environment.ExitCode;
+    }
+    private static IEnumerable<System.Windows.DependencyObject> Descendants(System.Windows.DependencyObject root)
+    {
+        for (int i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(root); i++)
+        {
+            var child = System.Windows.Media.VisualTreeHelper.GetChild(root, i);
+            yield return child;
+            foreach (var descendant in Descendants(child)) yield return descendant;
+        }
+    }
+    private static void Capture(Window window, string path)
+    {
+        var content = (FrameworkElement)window.Content;
+        var bitmap = new System.Windows.Media.Imaging.RenderTargetBitmap((int)Math.Ceiling(content.ActualWidth), (int)Math.Ceiling(content.ActualHeight), 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+        bitmap.Render(window);
+        var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
+        encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));
+        using var file = File.Create(path); encoder.Save(file);
+    }
+    private sealed class MemoryConfig(AppConfig config) : IConfigRepository
+    {
+        public Task<ConfigLoadResult> LoadAsync(CancellationToken ct = default) => Task.FromResult(new ConfigLoadResult(config));
+        public Task SaveAsync(AppConfig value, CancellationToken ct = default) { config = value; return Task.CompletedTask; }
+    }
+    private sealed class MemoryTrust : IShortcutTrustStore
+    {
+        public bool IsTrusted(ShortcutDefinition shortcut) => false;
+        public Task ConfirmAsync(ShortcutDefinition shortcut, CancellationToken ct) => Task.CompletedTask;
     }
     private sealed class FakeAudio : IAudioService
     {

@@ -1,12 +1,12 @@
 <Window x:Class="ControlCenter.App.Views.ControlPanel" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-Title="个人控制中心 · 第五轮候选" Width="360" SizeToContent="Height" WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False" Topmost="True"
+Title="个人控制中心" Width="380" SizeToContent="Height" WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False" Topmost="True"
 Background="{DynamicResource BackgroundBrush}" Foreground="{DynamicResource TextBrush}" FontFamily="Microsoft YaHei UI" FontSize="13" UseLayoutRounding="True">
 <Window.Resources><BooleanToVisibilityConverter x:Key="BoolVisibility"/></Window.Resources>
-<Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="15">
+<Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="16">
 <Grid x:Name="ContentRoot" RenderTransformOrigin="0.5,1"><Grid.RenderTransform><TranslateTransform/></Grid.RenderTransform>
 <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
 <StackPanel Margin="0,0,0,14">
-<DockPanel><Button x:Name="ExitButton" DockPanel.Dock="Right" Content="退出" Click="Exit_Click" Visibility="Collapsed" Margin="6,0,0,0" Padding="8,3"/><Button DockPanel.Dock="Right" x:Name="SettingsButton" Content="设置" Click="Settings_Click" AutomationProperties.AutomationId="Settings" AutomationProperties.Name="打开设置" Padding="10,3"/><TextBlock Text="个人控制中心" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/></DockPanel>
+<DockPanel><Button x:Name="ExitButton" DockPanel.Dock="Right" Content="退出" Click="Exit_Click" Visibility="Collapsed" Margin="6,0,0,0" Padding="8,3"/><Button DockPanel.Dock="Right" x:Name="SettingsButton" Content="设置" Click="Settings_Click" AutomationProperties.AutomationId="Settings" AutomationProperties.Name="打开设置" Padding="10,3"/><TextBlock Text="个人控制中心" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center"/></DockPanel>
 <DockPanel Margin="0,8,0,0"><Button DockPanel.Dock="Right" Content="刷新" Command="{Binding Refresh}" Padding="8,2" MinHeight="26"/><TextBlock Text="{Binding DataOriginLabel}" Style="{StaticResource Secondary}" VerticalAlignment="Center"/></DockPanel>
 </StackPanel>
 <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
@@ -27,7 +27,7 @@ Background="{DynamicResource BackgroundBrush}" Foreground="{DynamicResource Text
 <Border x:Name="PowerCard" Style="{StaticResource Card}"><StackPanel>
 <DockPanel Margin="0,0,0,10"><TextBlock DockPanel.Dock="Right" Text="{Binding PowerSource}" Style="{StaticResource Secondary}"/><TextBlock Text="电源" FontWeight="SemiBold"/></DockPanel>
 <ItemsControl ItemsSource="{Binding PowerChoices}"><ItemsControl.ItemTemplate><DataTemplate>
-<Button Content="{Binding Label}" Command="{Binding DataContext.SelectPower, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding Id}" Margin="0,0,0,6" HorizontalContentAlignment="Left"/>
+<Button ToolTip="{Binding Label}" Command="{Binding DataContext.SelectPower, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding Id}" Margin="0,0,0,6" HorizontalContentAlignment="Left"><TextBlock Text="{Binding Label}" TextWrapping="Wrap"/></Button>
 </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
 <TextBlock Text="{Binding PowerStatus}" Style="{StaticResource Secondary}" TextWrapping="Wrap"/>
 <TextBlock Text="切换整个方案，可能影响亮度和睡眠设置。" Style="{StaticResource Secondary}" TextWrapping="Wrap" Margin="0,6,0,0"/>
@@ -49,8 +49,8 @@ Background="{DynamicResource BackgroundBrush}" Foreground="{DynamicResource Text
 <TextBlock Text="{Binding RemoteText}" Style="{StaticResource Secondary}" TextWrapping="Wrap"/>
 <TextBlock Text="{Binding ProxyLaunchMessage}" Style="{StaticResource Secondary}" TextWrapping="Wrap" Margin="0,4,0,0"/>
 </StackPanel></Border>
-<StackPanel x:Name="ShortcutsCard"><ItemsControl ItemsSource="{Binding Shortcuts}"><ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate>
-<Button Content="{Binding Label}" Command="{Binding DataContext.Launch, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Margin="0,0,6,6" MaxWidth="290"/>
+<StackPanel x:Name="ShortcutsCard" Margin="2,4,2,0"><TextBlock Text="常用入口" FontWeight="SemiBold" Margin="0,0,0,10"/><ItemsControl ItemsSource="{Binding Shortcuts}"><ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate>
+<Button ToolTip="{Binding Label}" Command="{Binding DataContext.Launch, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Margin="0,0,6,6" MaxWidth="290"><TextBlock Text="{Binding Label}" TextWrapping="Wrap"/></Button>
 </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
 <Button Content="管理常用入口" Command="{Binding EditShortcuts}" Margin="0,4,0,0"/></StackPanel>
 </StackPanel></ScrollViewer>
