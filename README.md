@@ -6,6 +6,13 @@
 
 本轮 172 项非交互测试通过，Release 编译无警告/错误；加入配置并发冲突检测、重新载入、保存后清理警告，并隔离设置窗口关闭后的异步结果。此前 B6 未启动窗口；2026-10-02 获授权后已运行假数据演示窗口，检查浅色/深色、设置滚动与小窗口；仍未执行宿主控制或真实性能压测。
 
+## 使用与维护
+
+- [使用说明](docs/USER_GUIDE.md)：运行、模块操作、配置迁移、更新卸载与常见问题。
+- [维护说明](docs/MAINTENANCE.md)：新机器准备、代码结构、测试、UI 验收、打包与回退。
+
+本仓库为私有源码仓库；Download ZIP 是源码，不是可运行程序。目前尚未创建 GitHub Release，运行包由维护者按说明构建。
+
 ## 交付与记录
 
 - [界面优化验收](docs/acceptance/UI-2026-10-02.md)
@@ -15,7 +22,7 @@
 - [配置说明](docs/CONFIGURATION_GUIDE.md)、[音频兼容门](docs/AUDIO_COMPATIBILITY.md)
 - [进度](docs/IMPLEMENTATION_STATUS.md)、[迭代计划](docs/DELIVERY_PLAN.md)
 
-Git 分支 codex/b6-config-reliability，B4 基线已提交；B6 源码、构建收据和包内 RELEASE.json 关联同一提交。不推送远端，SDK、依赖缓存、构建和个人运行数据不进入 Git。
+源码同步到私有仓库 hqc135/personal-control-center，main 为主分支，保留迭代提交历史。候选包通过 RELEASE.json 关联构建时的源码提交；SDK、依赖缓存、构建和个人运行数据不进入 Git。
 
 ```powershell
 # 项目内 SDK 10.0.401，低优先级、单节点、不开窗口
