@@ -35,6 +35,7 @@ public interface IShortcutLauncher
 {
     Task<CommandResult> LaunchAsync(ShortcutDefinition shortcut, CancellationToken ct);
     Task<CommandResult> OpenSoundSettingsAsync(CancellationToken ct);
+    Task<CommandResult> OpenPowerSettingsAsync(CancellationToken ct) => Task.FromResult(new CommandResult(CommandOutcome.Failed, FailureCode.Unavailable, "本模式不打开系统电源设置。"));
 }
 public sealed record ModuleState<T>(T? Value, bool IsRefreshing = false, bool IsStale = true,
     DateTimeOffset? ObservedAt = null, string? Error = null, CommandOutcome Operation = CommandOutcome.Idle) where T : class;

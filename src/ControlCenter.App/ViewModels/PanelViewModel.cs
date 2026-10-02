@@ -18,7 +18,7 @@ public sealed class PanelViewModel : INotifyPropertyChanged, IDisposable
     private readonly ShortcutCoordinator shortcuts;
     private readonly Action<Action> dispatch;
     private AppConfig config;
-    private string notice = "第五轮候选：控制操作需主动点击；不会自动保持唤醒或测试外网。";
+    private string notice = "控制操作需主动点击；不会自动保持唤醒或测试外网。";
     private double volume;
     private bool devicesOpen, gestureActive, disposed;
     private string? gestureEndpoint;
@@ -26,7 +26,7 @@ public sealed class PanelViewModel : INotifyPropertyChanged, IDisposable
     private int pendingVolume;
     public event PropertyChangedEventHandler? PropertyChanged;
     public event Action? ShortcutSettingsRequested;
-    public string DataOriginLabel { get; init; } = "第五轮候选 · 真实系统状态";
+    public string DataOriginLabel { get; init; } = "真实系统状态";
     public SessionViewModel? Session { get; }
     public IReadOnlyList<string> Modules => config.Modules;
     public string AudioSwitchExplanation => AudioSwitchCapability.Current.Explanation;
@@ -47,6 +47,9 @@ public sealed class PanelViewModel : INotifyPropertyChanged, IDisposable
         ? audio.Devices.FirstOrDefault(x => x.Id == audio.DefaultEndpointId)?.Name ?? "未发现输出设备" : "读取中";
     public bool AudioAvailable => coordinator.Audio.Current.Value?.Level is not null && !(coordinator.Audio.Current.IsStale && coordinator.Audio.Current.Error is not null);
     public string AudioStatus => Status(coordinator.Audio.Current);
+    public string PowerHint => coordinator.Power.Current.Value?.Schemes.Length == 1
+        ? "系统仅提供一个电源方案。可打开电源设置调整电源模式。"
+        : "切换整个方案，可能影响亮度和睡眠设置。";
     public string PowerStatus => Status(coordinator.Power.Current);
     public bool PowerAvailable => coordinator.Power.Current.Value is not null && !(coordinator.Power.Current.IsStale && coordinator.Power.Current.Error is not null);
     public string PowerSource => coordinator.Power.Current.Value?.OnAcPower switch { true => "已接电源", false => "电池供电", _ => "电源状态未知" };
@@ -63,6 +66,7 @@ public sealed class PanelViewModel : INotifyPropertyChanged, IDisposable
     public RelayCommand ToggleDevices { get; }
     public RelayCommand SoundSettings { get; }
     public RelayCommand SelectPower { get; }
+    public RelayCommand PowerSettings { get; }
     public RelayCommand Launch { get; }
     public RelayCommand Refresh { get; }
     public RelayCommand EditShortcuts { get; }
@@ -74,7 +78,8 @@ public sealed class PanelViewModel : INotifyPropertyChanged, IDisposable
         Mute = new(p => { _ = RunMuteAsync(); }, p => AudioAvailable);
         ToggleDevices = new(p => DevicesOpen = !DevicesOpen);
         SoundSettings = new(p => { _ = RunAsync(() => launcher.OpenSoundSettingsAsync(CancellationToken.None)); });
-        SelectPower = new(p => { if (p is Guid id) _ = RunAsync(() => coordinator.SetPowerAsync(id)); }, p => PowerAvailable);
+        PowerSettings = new(_ => { _ = RunAsync(() => launcher.OpenPowerSettingsAsync(CancellationToken.None)); });
+        SelectPower = new(p => { if (p is Guid id) _ = RunAsync(() => coordinator.SetPowerAsync(id)); }, p => PowerAvailable && p is Guid id && coordinator.Power.Current.Value is { } current && current.ActiveId != id && current.Schemes.Any(x => x.Id == id));
         Launch = new(p => { if (p is ShortcutDefinition entry) _ = RunAsync(() => shortcuts.LaunchAsync(entry)); });
         Refresh = new(p => { _ = coordinator.RefreshAsync(); });
         EditShortcuts = new(p => ShortcutSettingsRequested?.Invoke());
@@ -137,7 +142,7 @@ public sealed class PanelViewModel : INotifyPropertyChanged, IDisposable
     private void PowerChanged() => dispatch(() =>
     {
         if (disposed) return;
-        Changed(nameof(PowerChoices)); Changed(nameof(PowerStatus)); Changed(nameof(PowerAvailable)); Changed(nameof(PowerSource)); SelectPower.Notify();
+        Changed(nameof(PowerHint)); Changed(nameof(PowerChoices)); Changed(nameof(PowerStatus)); Changed(nameof(PowerAvailable)); Changed(nameof(PowerSource)); SelectPower.Notify();
     });
     private static string Status<T>(ModuleState<T> state) where T : class
         => state.Operation == CommandOutcome.Pending ? "操作中，等待系统确认…" :

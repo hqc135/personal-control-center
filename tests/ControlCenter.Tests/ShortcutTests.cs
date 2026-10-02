@@ -95,5 +95,12 @@ public class ShortcutTests
         }
         finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
     }
+    [Fact] public async Task PowerSettingsUsesFixedUriWithoutChangingPowerScheme()
+    {
+        var platform = new FakePlatform();
+        var result = await new ShortcutLauncher(new FakeTrust(), platform).OpenPowerSettingsAsync(CancellationToken.None);
+        Assert.Equal(CommandOutcome.Confirmed, result.Outcome);
+        Assert.Equal("ms-settings:powersleep", Assert.Single(platform.Starts).FileName);
+    }
 }
 

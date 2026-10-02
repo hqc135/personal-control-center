@@ -63,16 +63,18 @@ public sealed class ShortcutLauncher(IShortcutTrustStore trust, ILaunchPlatform 
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or Win32Exception or COMException or ArgumentException)
         { return new(CommandOutcome.Failed, FailureCode.NativeFailure, "入口无法打开，请在设置中检查目标。"); }
     }, ct);
-    public Task<CommandResult> OpenSoundSettingsAsync(CancellationToken ct) => Task.Run(() =>
+    public Task<CommandResult> OpenSoundSettingsAsync(CancellationToken ct) => OpenSettingsAsync("ms-settings:sound", ct);
+    public Task<CommandResult> OpenPowerSettingsAsync(CancellationToken ct) => OpenSettingsAsync("ms-settings:powersleep", ct);
+    private Task<CommandResult> OpenSettingsAsync(string uri, CancellationToken ct) => Task.Run(() =>
     {
         try
         {
             ct.ThrowIfCancellationRequested();
-            platform.Start(new ProcessStartInfo("ms-settings:sound") { UseShellExecute = true });
+            platform.Start(new ProcessStartInfo(uri) { UseShellExecute = true });
             return CommandResult.Confirmed;
         }
         catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or OperationCanceledException)
-        { return new CommandResult(CommandOutcome.Failed, FailureCode.NativeFailure, "系统声音设置无法打开。"); }
+        { return new CommandResult(CommandOutcome.Failed, FailureCode.NativeFailure, "系统设置无法打开。"); }
     }, ct);
     private static CommandResult Missing() => new(CommandOutcome.Failed, FailureCode.Unavailable, "目标已不存在，请在设置中重新选择。");
 }

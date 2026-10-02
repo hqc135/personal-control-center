@@ -12,7 +12,7 @@ namespace ControlCenter.App.Views;
 public partial class ControlPanel : Window
 {
     private readonly PanelTransition transition = new();
-    private bool exiting;
+    private bool exiting, userPlaced;
     private NativeTray? anchorTray;
     public bool SuppressDismiss { get; set; }
     public bool MotionEnabled { get; set; } = true;
@@ -35,12 +35,20 @@ public partial class ControlPanel : Window
         IsVisibleChanged += (_, _) => Model.SetVisible(IsVisible);
         Deactivated += (_, _) => Dispatcher.BeginInvoke(DispatcherPriority.Background, () => { if (!IsActive && !SuppressDismiss) Dismiss(); });
         PreviewKeyDown += OnKey;
-        SourceInitialized += (_, _) => NativeWindow.Round(new WindowInteropHelper(this).Handle);
-        SizeChanged += (_, _) => { if (IsVisible) KeepInWorkArea(); };
+        SourceInitialized += (_, _) =>
+        {
+            var handle = new WindowInteropHelper(this).Handle;
+            NativeWindow.Round(handle);
+            HwndSource.FromHwnd(handle)?.AddHook(WindowMessage);
+        };
     }
     public void Present(NativeTray? tray = null)
     {
         anchorTray = tray;
+        if (userPlaced)
+        {
+            Show(); RefreshPlacement(); Activate(); Animate(true); return;
+        }
         var placement = NativeWindow.Placement(tray);
         MaxHeight = Math.Max(120, (placement.Work.Bottom - placement.Work.Top) / placement.Scale - 24);
         var handle = new WindowInteropHelper(this).EnsureHandle();
@@ -62,9 +70,14 @@ public partial class ControlPanel : Window
         Animate(true);
         if (DeviceButton.IsVisible) DeviceButton.Focus(); else SettingsButton.Focus();
     }
+    private nint WindowMessage(nint hwnd, int message, nint wParam, nint lParam, ref bool handled)
+    {
+        if (message == 0x0232) { userPlaced = true; RefreshPlacement(); } // WM_EXITSIZEMOVE
+        return 0;
+    }
     private void KeepInWorkArea()
     {
-        var placement = NativeWindow.Placement(anchorTray);
+        var placement = NativeWindow.Placement(anchorTray, userPlaced ? new WindowInteropHelper(this).Handle : 0);
         var scale = PresentationSource.FromVisual(this)?.CompositionTarget?.TransformToDevice.M11 ?? placement.Scale;
         var point = PointToScreen(new System.Windows.Point(0, 0));
         var target = PanelPlacement.Clamp(point.X, point.Y, ActualWidth * scale, ActualHeight * scale,
@@ -74,7 +87,7 @@ public partial class ControlPanel : Window
     public void RefreshPlacement()
     {
         if (!IsVisible || exiting) return;
-        var placement = NativeWindow.Placement(anchorTray);
+        var placement = NativeWindow.Placement(anchorTray, userPlaced ? new WindowInteropHelper(this).Handle : 0);
         MaxHeight = Math.Max(120, (placement.Work.Bottom - placement.Work.Top) / placement.Scale - 24);
         KeepInWorkArea();
     }
@@ -140,6 +153,6 @@ public partial class ControlPanel : Window
         if (!exiting) { e.Cancel = true; if (CanHide) Dismiss(); else ExitRequested?.Invoke(); }
         base.OnClosing(e);
     }
-    public void Exit() { exiting = true; Model.PropertyChanged -= ModelChanged; Model.SetVisible(false); Model.Dispose(); Close(); }
+    public void Exit() { exiting = true; Model.PropertyChanged -= ModelChanged; Model.SetVisible(false); Model.Dispose(); HwndSource.FromHwnd(new WindowInteropHelper(this).Handle)?.RemoveHook(WindowMessage); Close(); }
 }
 

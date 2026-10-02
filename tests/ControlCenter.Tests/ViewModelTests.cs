@@ -46,4 +46,17 @@ public class ViewModelTests
         var choice = Assert.Single(model.PowerChoices);
         Assert.Equal(id, choice.Id); Assert.Equal("✓  Custom", choice.Label);
     }
+    [Fact] public async Task CurrentAndUnknownPowerSchemesCannotBeActivatedFromPanel()
+    {
+        var active = Guid.NewGuid(); var other = Guid.NewGuid();
+        var power = new FakePower { Snapshot = new([new(active, "Balanced")], active, true) };
+        await using var coordinator = new ControlCoordinator(new FakeAudio(), power, TimeSpan.Zero);
+        using var model = new PanelViewModel(coordinator, new ShortcutLauncher(new FakeTrust(), new FakePlatform()), new(), action => action());
+        await coordinator.RefreshAsync();
+        Assert.Contains("仅提供一个", model.PowerHint);
+        Assert.False(model.SelectPower.CanExecute(active)); Assert.False(model.SelectPower.CanExecute(other));
+        power.Snapshot = new([new(active, "Balanced"), new(other, "Custom")], active, true);
+        await coordinator.RefreshAsync();
+        Assert.True(model.SelectPower.CanExecute(other)); Assert.False(model.SelectPower.CanExecute(active));
+    }
 }

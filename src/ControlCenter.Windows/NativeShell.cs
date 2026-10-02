@@ -65,12 +65,12 @@ public sealed class NativeTray : IDisposable
 public static class NativeWindow
 {
     [StructLayout(LayoutKind.Sequential)] private struct MonitorInfo { public uint Size; public Rect Monitor, Work; public uint Flags; }
-    public static (Rect Work, double Scale, Rect? Anchor) Placement(NativeTray? tray)
+    public static (Rect Work, double Scale, Rect? Anchor) Placement(NativeTray? tray, nint window = 0)
     {
         var anchor = tray?.GetRect();
         GetCursorPos(out var point);
         if (anchor is { } r) { point.X = (r.Left + r.Right) / 2; point.Y = (r.Top + r.Bottom) / 2; }
-        var monitor = MonitorFromPoint(point, 2);
+        var monitor = window != 0 ? MonitorFromWindow(window, 2) : MonitorFromPoint(point, 2);
         var info = new MonitorInfo { Size = (uint)Marshal.SizeOf<MonitorInfo>() };
         if (!GetMonitorInfo(monitor, ref info)) throw new InvalidOperationException("无法读取屏幕工作区。");
         GetDpiForMonitor(monitor, 0, out var x, out _);
@@ -80,6 +80,7 @@ public static class NativeWindow
     public static void Foreground(nint hwnd) => SetForegroundWindow(hwnd);
     public static void Round(nint hwnd) { int value = 2; DwmSetWindowAttribute(hwnd, 33, ref value, 4); }
     [DllImport("user32.dll")] private static extern bool GetCursorPos(out Point point);
+    [DllImport("user32.dll")] private static extern nint MonitorFromWindow(nint window, uint flags);
     [DllImport("user32.dll")] private static extern nint MonitorFromPoint(Point point, uint flags);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern bool GetMonitorInfo(nint monitor, ref MonitorInfo info);
     [DllImport("shcore.dll")] private static extern int GetDpiForMonitor(nint monitor, int type, out uint x, out uint y);

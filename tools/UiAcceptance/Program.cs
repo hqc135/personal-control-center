@@ -38,6 +38,21 @@ internal static class Program
                 {
                     Directory.CreateDirectory(args[1]);
                     await Task.Delay(700);
+                    panel.MotionEnabled = false;
+                    var handle = new System.Windows.Interop.WindowInteropHelper(panel).Handle;
+                    var caption = panel.PointToScreen(new Point(80, 30));
+                    var edge = panel.PointToScreen(new Point(2, 100));
+                    if (HitTest(handle, caption) != 2 || HitTest(handle, edge) != 10) throw new Exception("Native caption/resize hit tests failed");
+                    var settingsButton = (FrameworkElement)panel.FindName("SettingsButton");
+                    var buttonPoint = settingsButton.PointToScreen(new Point(settingsButton.ActualWidth / 2, settingsButton.ActualHeight / 2));
+                    if (HitTest(handle, buttonPoint) != 1) throw new Exception("Settings button became draggable caption");
+                    panel.Width = 460; panel.Height = 560; panel.Left += 20; panel.Top += 20; panel.UpdateLayout();
+                    SendMessage(handle, 0x0232, 0, 0);
+                    var position = panel.PointToScreen(new Point());
+                    panel.Hide(); panel.Present(); panel.UpdateLayout();
+                    var restored = panel.PointToScreen(new Point());
+                    if (Math.Abs(panel.ActualWidth - 460) > 2 || Math.Abs(panel.ActualHeight - 560) > 2 || (restored - position).Length > 2) throw new Exception("Panel geometry lost on reopen");
+                    Capture(panel, Path.Combine(args[1], "resized-panel.png"));
                     foreach (var theme in new[] { "light", "dark" })
                     {
                         ControlCenter.App.ThemeManager.Apply(theme);
@@ -75,7 +90,7 @@ internal static class Program
                     if (!(await audio.ReadLevelAsync("fake", CancellationToken.None)).Muted) throw new Exception("Mute did not reach fake audio");
                     session.Start.Execute("30"); await Task.Delay(100);
                     session.Stop.Execute(null); await Task.Delay(100);
-                    File.WriteAllText(Path.Combine(args[1], "result.txt"), "PASS: light/dark rendered; save footer stationary during scrolling and visible at 440x420; keyboard focus preserves button size; backup popup opens and selection label updates; mute reached fake audio; awake start/stop commands exercised; fake services only.");
+                    File.WriteAllText(Path.Combine(args[1], "result.txt"), "PASS: native caption/resize/button hit tests and moved/resized geometry retained on reopen; light/dark rendered; save footer stationary during scrolling and visible at 440x420; keyboard focus preserves button size; backup popup opens and selection label updates; mute reached fake audio; awake start/stop commands exercised; fake services only.");
                 }
                 catch (Exception ex) { File.WriteAllText(Path.Combine(args[1], "result.txt"), "FAIL: " + ex); Environment.ExitCode = 1; }
                 finally { panel.Exit(); app.Shutdown(); }
@@ -85,6 +100,9 @@ internal static class Program
         coordinator.DisposeAsync().AsTask().GetAwaiter().GetResult();
         return Environment.ExitCode;
     }
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern nint SendMessage(nint hwnd, int message, nint wParam, nint lParam);
+    private static long HitTest(nint hwnd, Point point) => SendMessage(hwnd, 0x0084, 0, (nint)((((int)point.Y & 0xffff) << 16) | ((int)point.X & 0xffff))).ToInt64();
     private static IEnumerable<System.Windows.DependencyObject> Descendants(System.Windows.DependencyObject root)
     {
         for (int i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(root); i++)
