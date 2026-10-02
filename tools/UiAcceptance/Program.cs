@@ -53,7 +53,9 @@ internal static class Program
                         var popup = (System.Windows.Controls.Primitives.Popup)combo.Template.FindName("PART_Popup", combo);
                         if (!popup.IsOpen || popup.Child is not FrameworkElement { ActualHeight: > 0 }) throw new Exception("Backup dropdown did not open");
                         combo.SelectedIndex = 1; combo.IsDropDownOpen = false;
-                        if (combo.Text != "config-202610020002.json") throw new Exception("Backup selection label incorrect");
+                        settings.UpdateLayout();
+                        var label = (System.Windows.Controls.TextBlock)combo.Template.FindName("SelectionLabel", combo);
+                        if (label.Text != "config-202610020002.json") throw new Exception("Backup selection label incorrect");
                         var save = (System.Windows.Controls.Button)settings.FindName("SaveButton");
                         var before = save.TranslatePoint(new Point(), settings);
                         foreach (var scroll in Descendants(settings).OfType<System.Windows.Controls.ScrollViewer>()) scroll.ScrollToEnd();
