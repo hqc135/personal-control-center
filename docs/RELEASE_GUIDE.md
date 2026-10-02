@@ -14,7 +14,7 @@ build-framework-dependent.json 记录提交、脏状态、SDK 与发布文件 SH
 
 ZIP 压缩时间戳会变化，因此不承诺两次 ZIP 字节相同。B5 曾二次 Release 构建比较项目 DLL/EXE 哈希，证据在 artifacts/evidence/B5/reproducibility.json；该历史验证不代表 B6 或 0.6.1 已重复验证；仅证明同目录/同 SDK 的项目二进制复现，不宣称不同绝对路径、不同 SDK 或操作系统均相同。
 
-## 自包含路径（本轮受阻）
+## 自包含发布路径
 
 scripts/restore-runtime.ps1 显式限速 512 KiB/s，从官方 NuGet 下载两份 10.0.12 win-x64 runtime pack，核对响应中的 SHA512；无 TLS 绕过。下载后可用：
 
@@ -25,7 +25,7 @@ scripts/restore-runtime.ps1 显式限速 512 KiB/s，从官方 NuGet 下载两�
 ./scripts/verify-package.ps1 -Mode self-contained
 ```
 
-不裁剪、不使用 ReadyToRun。本轮实际 GET 连续 TLS 握手失败，未获得运行时包，未执行成功的自包含构建/验证。该路径代码就绪但**未验证可交付**，不能用框架依赖 ZIP 代称自包含。自包含打包要求 coreclr 和 Desktop Runtime，同时复制运行时 LICENSE/THIRD-PARTY-NOTICES；缺少许可证则拒绝打包。
+不裁剪、不使用 ReadyToRun。此前下载曾遇到 TLS 失败；本次重新获取官方运行时包并验证 SHA512 后生成自包含包。自包含打包要求 coreclr 和 Desktop Runtime，同时复制运行时 LICENSE/THIRD-PARTY-NOTICES；缺少许可证则拒绝打包。打包验证不代替真实系统集成验收。
 
 框架依赖包使用系统安装的 Desktop Runtime；自包含包须由项目后续升级其捆绑运行时。这两者不能混淆。
 

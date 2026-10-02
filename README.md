@@ -1,42 +1,38 @@
 # 个人控制中心
 
-2026-10-02 · **B6 界面优化候选 0.6.1**。当前为自用、框架依赖候选，**不是最终验收通过的正式版**。
+一个放在 Windows 托盘里的轻量控制面板，集中管理音量、电源方案、临时保持唤醒、代理检测和常用入口。
 
-声音/静音、电源、临时唤醒、代理检测、快捷入口、配置迁移恢复、模块设置、快捷键及用户自启已实现。默认音频输出切换仍降级到系统声音设置。
+## 下载与使用
 
-本轮 172 项非交互测试通过，Release 编译无警告/错误；加入配置并发冲突检测、重新载入、保存后清理警告，并隔离设置窗口关闭后的异步结果。此前 B6 未启动窗口；2026-10-02 获授权后已运行假数据演示窗口，检查浅色/深色、设置滚动与小窗口；仍未执行宿主控制或真实性能压测。
+**[下载 Windows x64 免安装 ZIP](https://github.com/hqc135/personal-control-center/releases/download/v0.6.1/PersonalControlCenter-0.6.1-win-x64.zip)** · [查看发布说明](https://github.com/hqc135/personal-control-center/releases/tag/v0.6.1)
 
-## 使用与维护
+1. 下载 ZIP，完整解压到你想放置的目录。
+2. 双击 `PersonalControlCenter.exe`，即可使用。
+3. 点击托盘图标打开或收起面板，右键托盘图标可退出。
 
-- [使用说明](docs/USER_GUIDE.md)：运行、模块操作、配置迁移、更新卸载与常见问题。
-- [维护说明](docs/MAINTENANCE.md)：新机器准备、代码结构、测试、UI 验收、打包与回退。
+支持 **Windows 11 x64（内部版本 22621 及以上）**。ZIP 已包含 .NET 桌面运行时，**无需另装 .NET、无需管理员权限**。不要只拷贝 EXE，也不要在压缩包里直接运行。
 
-本仓库为私有源码仓库；Download ZIP 是源码，不是可运行程序。目前尚未创建 GitHub Release，运行包由维护者按说明构建。
+仓库目前为私有仓库，下载时请先登录有访问权限的 GitHub 账号。请下载上面的应用 ZIP；GitHub 自动生成的 `Source code` 是源码。
 
-## 交付与记录
+## 能做什么
 
-- [界面优化验收](docs/acceptance/UI-2026-10-02.md)
-- [B6 验收与限制](docs/acceptance/B6.md)
-- [发布检查及待验收矩阵](docs/RELEASE_CHECKLIST.md)
-- [构建与 Git 回退](docs/RELEASE_GUIDE.md)
-- [配置说明](docs/CONFIGURATION_GUIDE.md)、[音频兼容门](docs/AUDIO_COMPATIBILITY.md)
-- [进度](docs/IMPLEMENTATION_STATUS.md)、[迭代计划](docs/DELIVERY_PLAN.md)
+- **声音**：调节当前输出音量、静音，查看输出设备。
+- **电源**：切换 Windows 电源方案。
+- **保持唤醒**：按时长临时保持电脑唤醒，可选择屏幕常亮。
+- **代理**：查看本机代理端口状态，手动测试指定目标。
+- **常用入口**：集中打开文件夹、网页和确认过的程序。
+- **个性化**：浅色/深色、模块排序与隐藏、全局快捷键、可选登录自启。
 
-源码同步到私有仓库 hqc135/personal-control-center，main 为主分支，保留迭代提交历史。候选包通过 RELEASE.json 关联构建时的源码提交；SDK、依赖缓存、构建和个人运行数据不进入 Git。
+自启默认关闭。电源方案切换会影响系统设置；默认音频输出切换目前通过系统声音设置完成。
 
-```powershell
-# 项目内 SDK 10.0.401，低优先级、单节点、不开窗口
-./scripts/build.ps1 -Offline -Publish
-./scripts/dependency-inventory.ps1
-# 需源码已提交、工作区干净，并由当前提交构建
-./scripts/package.ps1
-./scripts/verify-package.ps1
-```
+## 更新与数据
 
-本轮交付 artifacts/PersonalControlCenter-B6-CANDIDATE-framework-dependent.zip 与 B6-source.zip。运行需要 Windows 11 x64 build 22621+ 和 .NET 10 Windows Desktop Runtime。--show / --tray；托盘右键退出，托盘失败时普通窗口提供退出。
+更新前从托盘退出，解压新版替换程序文件。配置独立保存在 `%LOCALAPPDATA%/PersonalControlCenter`，不会因替换程序文件而被删除。移动程序目录前，如已启用自启，请先关闭自启，再在新位置重新启用。
 
-自包含包所需 NuGet 下载连续 TLS 握手失败，未绕过证书校验；本轮**未生成自包含包**。后续网络恢复可显式运行 restore-runtime.ps1，再构建/打包 self-contained 模式；运行时仅放项目，不安装系统。
+## 文档
 
-真实 DPI/多屏、睡眠恢复、驱动、热键、自启、CPU/内存/句柄预算均待验收；500 次假状态循环不等于真实 UI 性能测试。项目许可证未决定，在线漏洞审计未完成，不公开发布。
+- [使用说明](docs/USER_GUIDE.md)：详细操作、备份迁移、更新卸载与常见问题。
+- [维护说明](docs/MAINTENANCE.md)：源码结构、开发环境、构建测试和发布流程。
+- [验收记录](docs/acceptance/UI-2026-10-02.md) · [发布检查](docs/RELEASE_CHECKLIST.md)
 
-旧包不作版本历史使用，以 Git 源码提交回退；历史证据保留。B1–B3 ZIP 已删除，旧发布/暂存目录此前清理被自动审批拒绝，暂留。
+当前版本 **0.6.1 预发布版**。172 项自动测试和假数据界面验收通过；真实系统控制、性能、多屏/DPI 等完整矩阵仍待验收。程序未签名，当前用于个人试用。

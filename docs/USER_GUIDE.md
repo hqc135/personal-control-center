@@ -1,10 +1,10 @@
 # 使用说明
 
-适用版本：0.6.1 候选。Windows 11 x64，内部版本 22621 或更高；框架依赖包需要 .NET 10 Windows Desktop Runtime x64。SDK 仅用于开发，普通使用不需要 SDK。当前没有已验收的自包含包。
+适用版本：0.6.1 候选。Windows 11 x64，内部版本 22621 或更高；GitHub Release 的免安装 ZIP 已包含 .NET 10 Windows Desktop Runtime x64，普通使用无需另外安装 .NET 或 SDK。
 
 ## 获取与启动
 
-仓库保存源码；GitHub 的 Download ZIP 是源码，不能直接运行。维护者可按 [维护说明](MAINTENANCE.md) 构建候选包。收到 PersonalControlCenter-B6-CANDIDATE-framework-dependent.zip 后：
+从 [Release 下载应用 ZIP](https://github.com/hqc135/personal-control-center/releases/download/v0.6.1/PersonalControlCenter-0.6.1-win-x64.zip)。私有仓库需登录有权限的 GitHub 账号。不要下载 Source code，那是开发源码。下载后：
 
 1. 将整个 ZIP 解压到固定目录，保留所有 DLL、runtimeconfig.json 和 Assets，不能只复制 EXE。
 2. 双击 PersonalControlCenter.exe，默认显示面板；无需管理员权限。
@@ -58,7 +58,7 @@
 
 | 现象 | 处理 |
 |---|---|
-| 提示缺少 .NET | 检查是否具备 .NET 10 **Windows Desktop Runtime x64**，普通 .NET Runtime 不等同桌面运行时。 |
+| 提示缺少 .NET | Release ZIP 已自带运行时；检查是否完整解压、是否只复制了 EXE，或误用了旧 framework-dependent 包。 |
 | 程序入口不能启动 | 在设置中核对并确认该入口；修改路径或参数后需重新确认。 |
 | 快捷键冲突 | 更换组合或清空关闭，继续使用托盘。 |
 | 配置无法保存 | 看具体提示：冲突用重新载入；只读检查文件版本/权限/大小；不要反复覆盖原文件。 |

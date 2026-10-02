@@ -14,7 +14,7 @@
 | 依赖许可清单 | 12 个构建/测试包离线盘点 | DEPENDENCIES.json |
 | 许可遗留 | xunit.abstractions 2.0.3 元数据仅旧 licenseUrl，无 SPDX；项目许可证未指定 | 不宣称已获公开发布许可 |
 | 在线漏洞审计 | 未完成 | 不用离线盘点声称无漏洞 |
-| 自包含 win-x64 | 受阻，未生成 | 官方包 GET TLS 失败，上一轮 B5/runtime-download-failure.txt |
+| 自包含 win-x64 | 本次官方包 SHA512 验证后构建与打包 | runtime-downloads.json、build-self-contained.json、delivery-check.json |
 | 音频输出切换 | 禁用/系统设置降级 | AUDIO_COMPATIBILITY.md |
 | 真机正确性 | 全部相应人工项待执行 | 前四轮人工清单 |
 | 高对比度/键盘/读屏/DPI/多屏 | 未执行 | 安排窗口验收时检查 |

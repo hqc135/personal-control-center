@@ -25,7 +25,7 @@ foreach ($file in Get-ChildItem -LiteralPath $published -File -Recurse) {
     Copy-Item -LiteralPath $file.FullName -Destination $destination
 }
 Copy-Item -LiteralPath 'docs/PACKAGE_README.md' -Destination (Join-Path $release 'README.md')
-Copy-Item -LiteralPath 'LICENSE','THIRD-PARTY-NOTICES.md','docs/config.schema.json','docs/CONFIGURATION_GUIDE.md','docs/AUDIO_COMPATIBILITY.md','docs/RELEASE_CHECKLIST.md' -Destination $release
+Copy-Item -LiteralPath 'LICENSE','THIRD-PARTY-NOTICES.md','docs/config.schema.json','docs/CONFIGURATION_GUIDE.md','docs/AUDIO_COMPATIBILITY.md','docs/RELEASE_CHECKLIST.md','docs/USER_GUIDE.md','docs/MAINTENANCE.md' -Destination $release
 Copy-Item -LiteralPath 'artifacts/evidence/B6/dependencies.json' -Destination (Join-Path $release 'DEPENDENCIES.json')
 if ($Mode -eq 'self-contained') {
     $licenses = Join-Path $release 'runtime-notices'
