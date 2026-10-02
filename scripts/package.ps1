@@ -31,11 +31,13 @@ if ($Mode -eq 'self-contained') {
     $licenses = Join-Path $release 'runtime-notices'
     New-Item -ItemType Directory -Force $licenses | Out-Null
     foreach ($id in @('microsoft.netcore.app.runtime.win-x64','microsoft.windowsdesktop.app.runtime.win-x64')) {
-        foreach ($name in @('LICENSE.TXT','THIRD-PARTY-NOTICES.TXT')) {
-            $notice = Get-ChildItem -LiteralPath (Join-Path '.tools/packages' ($id + '/10.0.12')) -File | Where-Object { $_.Name -ieq $name } | Select-Object -First 1
-            if (!$notice) { throw ('Missing runtime notice: ' + $id + '/' + $name) }
-            Copy-Item -LiteralPath $notice.FullName -Destination (Join-Path $licenses ($id + '-' + $name))
+        $root = Join-Path '.tools/packages' ($id + '/10.0.12')
+        $notices = @(Get-ChildItem -LiteralPath $root -File | Where-Object { $_.Name -imatch '^(LICENSE(\.TXT)?|THIRD-PARTY-NOTICES(\.TXT)?)$' })
+        if (!($notices | Where-Object { $_.Name -imatch '^LICENSE(\.TXT)?$' })) { throw ('Missing runtime license: ' + $id) }
+        foreach ($notice in $notices) {
+            Copy-Item -LiteralPath $notice.FullName -Destination (Join-Path $licenses ($id + '-' + $notice.Name))
         }
+
     }
 }
 '{"schemaVersion":1,"hotkey":null,"appearance":{"theme":"system","fontFamily":"PingFang SC","motion":"subtle","material":"solid"},"proxy":{"host":"127.0.0.1","port":7897,"testUrl":null,"shortcutId":null},"modules":["audio","power","awake","proxy","shortcuts"],"shortcuts":[{"id":"downloads","label":"下载","kind":"knownFolder","target":"Downloads"}]}' | Set-Content -LiteralPath (Join-Path $release 'config.example.json') -Encoding utf8
