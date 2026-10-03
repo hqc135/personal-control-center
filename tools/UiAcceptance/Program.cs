@@ -56,7 +56,7 @@ internal static class Program
                     foreach (var theme in new[] { "light", "dark" })
                     {
                         ControlCenter.App.ThemeManager.Apply(theme);
-                        panel.Width = 420; panel.Height = 700;
+                        panel.Width = 440; panel.Height = 620;
                         panel.UpdateLayout();
                         var powerCard = (FrameworkElement)panel.FindName("PowerCard");
                         var awakeCard = (FrameworkElement)panel.FindName("AwakeCard");
@@ -73,9 +73,17 @@ internal static class Program
                         if (shortcuts.TranslatePoint(new Point(), panelScroll).Y + shortcuts.ActualHeight > panelScroll.ActualHeight + 1) throw new Exception("Expanded narrow panel cannot reach last card");
                         Capture(panel, Path.Combine(args[1], theme + "-panel-expanded-small.png"));
                         foreach (var expander in Descendants(panel).OfType<System.Windows.Controls.Expander>()) expander.IsExpanded = false;
-                        panelScroll.ScrollToTop(); panel.Width = 420; panel.Height = 700; panel.UpdateLayout();
+                        panelScroll.ScrollToTop(); panel.Width = 440; panel.Height = 620; panel.UpdateLayout();
                         var settings = new SettingsWindow(new MemoryConfig(config), config, false, new MemoryTrust());
+                        var pin = (System.Windows.Controls.Button)panel.FindName("PinButton");
+                        pin.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Button.ClickEvent));
+                        if (!panel.IsPinned) throw new Exception("Pin did not activate");
+                        panel.SuppressDismiss = false; panel.CanHide = true;
                         settings.Show(); await Task.Delay(150); settings.UpdateLayout();
+                        if (!panel.IsVisible) throw new Exception("Pinned panel dismissed on deactivation");
+                        panel.SuppressDismiss = true; panel.CanHide = false;
+                        pin.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Button.ClickEvent));
+                        if (panel.IsPinned) throw new Exception("Pin did not release");
                         Capture(settings, Path.Combine(args[1], theme + "-settings-top.png"));
                         var combo = (System.Windows.Controls.ComboBox)settings.FindName("BackupList");
                         combo.ItemsSource = new[] { new ConfigBackup("config-202610020001.json", DateTime.UtcNow), new ConfigBackup("config-202610020002.json", DateTime.UtcNow) };
@@ -106,7 +114,7 @@ internal static class Program
                     if (!(await audio.ReadLevelAsync("fake", CancellationToken.None)).Muted) throw new Exception("Mute did not reach fake audio");
                     session.Start.Execute("30"); await Task.Delay(100);
                     session.Stop.Execute(null); await Task.Delay(100);
-                    File.WriteAllText(Path.Combine(args[1], "result.txt"), "PASS: compact cards share row at 420px and stack at 340px; expanded 340x360 panel scrolls to last card; native caption/resize/button hit tests and moved/resized geometry retained on reopen; light/dark rendered; save footer stationary during scrolling and visible at 440x420; keyboard focus preserves button size; backup popup opens and selection label updates; mute reached fake audio; awake start/stop commands exercised; fake services only.");
+                    File.WriteAllText(Path.Combine(args[1], "result.txt"), "PASS: pin/unpin and pinned deactivation verified; compact cards share row at 440px and stack at 340px; expanded 340x360 panel scrolls to last card; native caption/resize/button hit tests and moved/resized geometry retained on reopen; light/dark rendered; save footer stationary during scrolling and visible at 440x420; keyboard focus preserves button size; backup popup opens and selection label updates; mute reached fake audio; awake start/stop commands exercised; fake services only.");
                 }
                 catch (Exception ex) { File.WriteAllText(Path.Combine(args[1], "result.txt"), "FAIL: " + ex); Environment.ExitCode = 1; }
                 finally { panel.Exit(); app.Shutdown(); }

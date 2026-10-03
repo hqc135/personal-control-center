@@ -15,6 +15,7 @@ public partial class ControlPanel : Window
     private bool exiting, userPlaced;
     private NativeTray? anchorTray;
     public bool SuppressDismiss { get; set; }
+    public bool IsPinned { get; private set; }
     public bool MotionEnabled { get; set; } = true;
     public bool CanHide { get; set; } = true;
     public event Action? SettingsRequested;
@@ -33,7 +34,7 @@ public partial class ControlPanel : Window
         ApplyModules();
         Model.PropertyChanged += ModelChanged;
         IsVisibleChanged += (_, _) => Model.SetVisible(IsVisible);
-        Deactivated += (_, _) => Dispatcher.BeginInvoke(DispatcherPriority.Background, () => { if (!IsActive && !SuppressDismiss) Dismiss(); });
+        Deactivated += (_, _) => Dispatcher.BeginInvoke(DispatcherPriority.Background, () => { if (!IsActive && !SuppressDismiss && !IsPinned) Dismiss(); });
         PreviewKeyDown += OnKey;
         SourceInitialized += (_, _) =>
         {
@@ -143,6 +144,13 @@ public partial class ControlPanel : Window
         e.Handled = true;
     }
     private void Settings_Click(object sender, RoutedEventArgs e) => SettingsRequested?.Invoke();
+    private void Pin_Click(object sender, RoutedEventArgs e)
+    {
+        IsPinned = !IsPinned;
+        PinButton.Content = IsPinned ? "取消固定" : "固定";
+        PinButton.ToolTip = IsPinned ? "已固定：切换窗口时保持打开；Esc 仍可收起" : "切换到其他窗口时保持面板打开";
+        PinButton.SetResourceReference(BackgroundProperty, IsPinned ? "AccentSurfaceBrush" : "SurfaceBrush");
+    }
     private void Exit_Click(object sender, RoutedEventArgs e) => ExitRequested?.Invoke();
     private void Volume_Begin(object sender, MouseButtonEventArgs e) => Model.BeginVolumeGesture();
     private void Volume_End(object sender, MouseButtonEventArgs e) => Model.EndVolumeGesture();
