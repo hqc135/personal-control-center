@@ -17,8 +17,11 @@ internal static class Program
         var coordinator = new ControlCoordinator(audio, power);
         Action<Action> dispatch = action => app.Dispatcher.BeginInvoke(action);
         var config = new AppConfig { Proxy = new(TestUrl: "https://example.com/") };
-        var session = new SessionViewModel(new FakeAwake(), new ProxyMonitor(new FakeProxy(), dispatch), new FakeLauncher(), config, dispatch);
-        var model = new PanelViewModel(coordinator, new FakeLauncher(), config, dispatch, session)
+        var awake = new FakeAwake();
+        var desktopService = new FakeDesktop();
+        var desktop = new DesktopViewModel(new FakeLauncher(), desktopService, scenes: new SceneRunner(coordinator, awake));
+        var session = new SessionViewModel(awake, new ProxyMonitor(new FakeProxy(), dispatch), new FakeLauncher(), config, dispatch);
+        var model = new PanelViewModel(coordinator, new FakeLauncher(), config, dispatch, session, desktop)
         { DataOriginLabel = "演示数据 · UI 验收工具", Notice = "所有服务是假实现，不会改动系统。" };
         var panel = new ControlPanel(model) { Title = "演示数据 · UI 验收工具", CanHide = false, SuppressDismiss = true };
         panel.SettingsRequested += () =>
@@ -56,7 +59,7 @@ internal static class Program
                     foreach (var theme in new[] { "light", "dark" })
                     {
                         ControlCenter.App.ThemeManager.Apply(theme);
-                        panel.Width = 440; panel.Height = 620;
+                        panel.Width = 460; panel.Height = 720;
                         panel.UpdateLayout();
                         var powerCard = (FrameworkElement)panel.FindName("PowerCard");
                         var awakeCard = (FrameworkElement)panel.FindName("AwakeCard");
@@ -73,7 +76,7 @@ internal static class Program
                         if (shortcuts.TranslatePoint(new Point(), panelScroll).Y + shortcuts.ActualHeight > panelScroll.ActualHeight + 1) throw new Exception("Expanded narrow panel cannot reach last card");
                         Capture(panel, Path.Combine(args[1], theme + "-panel-expanded-small.png"));
                         foreach (var expander in Descendants(panel).OfType<System.Windows.Controls.Expander>()) expander.IsExpanded = false;
-                        panelScroll.ScrollToTop(); panel.Width = 440; panel.Height = 620; panel.UpdateLayout();
+                        panelScroll.ScrollToTop(); panel.Width = 460; panel.Height = 720; panel.UpdateLayout();
                         var settings = new SettingsWindow(new MemoryConfig(config), config, false, new MemoryTrust());
                         var pin = (System.Windows.Controls.Button)panel.FindName("PinButton");
                         pin.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Button.ClickEvent));
@@ -114,7 +117,44 @@ internal static class Program
                     if (!(await audio.ReadLevelAsync("fake", CancellationToken.None)).Muted) throw new Exception("Mute did not reach fake audio");
                     session.Start.Execute("30"); await Task.Delay(100);
                     session.Stop.Execute(null); await Task.Delay(100);
-                    File.WriteAllText(Path.Combine(args[1], "result.txt"), "PASS: pin/unpin and pinned deactivation verified; compact cards share row at 440px and stack at 340px; expanded 340x360 panel scrolls to last card; native caption/resize/button hit tests and moved/resized geometry retained on reopen; light/dark rendered; save footer stationary during scrolling and visible at 440x420; keyboard focus preserves button size; backup popup opens and selection label updates; mute reached fake audio; awake start/stop commands exercised; fake services only.");
+                    model.SearchText = "不存在的入口";
+                    if (model.FilteredShortcuts.Count != 0) throw new Exception("Shortcut search did not filter");
+                    model.SearchText = "下载";
+                    if (model.FilteredShortcuts.Count != 1) throw new Exception("Shortcut search did not find configured item");
+                    model.SearchText = "";
+                    await desktop.RefreshAsync();
+                    await desktop.RunAsync(ct => desktopService.SetMicrophoneMuteAsync("mic", true, ct));
+                    if (desktop.Snapshot?.Microphone?.Muted != true) throw new Exception("Microphone state not read back");
+                    await desktop.SetBrightnessAsync("display", 42);
+                    if (desktop.Displays.Single().Percent != 42) throw new Exception("Brightness state not read back");
+                    await desktop.MediaAsync("player", "toggle");
+                    if (desktop.Media.Single().Playing) throw new Exception("Media operation not reflected");
+                    await desktop.SwitchOutputAsync("fake");
+                    if (desktopService.Output != "fake") throw new Exception("Output target lost");
+                    var beforeScene = await audio.ReadLevelAsync("fake", default);
+                    await desktop.Scenes!.ApplyAsync(new("演示场景", Volume: 25, Muted: false, AwakeMinutes: 30));
+                    var sceneState = await audio.ReadLevelAsync("fake", default);
+                    if (Math.Abs(sceneState.Volume - .25) > .01 || sceneState.Muted || awake.Current.Status != AwakeStatus.Active) throw new Exception("Scene actions incomplete");
+                    await desktop.Scenes.RestoreAsync();
+                    if (await audio.ReadLevelAsync("fake", default) != beforeScene || awake.Current.Status != AwakeStatus.Off) throw new Exception("Scene restore incomplete");
+                    await desktop.Scenes.ApplyAsync(new("保留后续修改", Volume: 25));
+                    await audio.SetVolumeAsync("fake", .8f, default);
+                    await desktop.Scenes.RestoreAsync();
+                    if (Math.Abs((await audio.ReadLevelAsync("fake", default)).Volume - .8) > .01) throw new Exception("Scene restore overwrote later manual adjustment");
+                    ((System.Windows.Controls.Button)panel.FindName("AllTab")).RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Button.ClickEvent));
+                    await Task.Delay(150); panel.UpdateLayout();
+                    foreach (var theme in new[] { "light", "dark" })
+                    {
+                        ControlCenter.App.ThemeManager.Apply(theme); panel.UpdateLayout();
+                        var scroll = (System.Windows.Controls.ScrollViewer)panel.FindName("PanelScroll");
+                        scroll.ScrollToVerticalOffset(500); panel.UpdateLayout(); Capture(panel, Path.Combine(args[1], theme + "-all-features.png"));
+                        scroll.ScrollToEnd(); panel.UpdateLayout(); Capture(panel, Path.Combine(args[1], theme + "-all-tools.png"));
+                        var sceneWindow = new SceneWindow(desktop, model.PowerChoices); sceneWindow.Show(); await Task.Delay(100); sceneWindow.UpdateLayout();
+                        Capture(sceneWindow, Path.Combine(args[1], theme + "-scenes.png")); sceneWindow.Close();
+                        var updateWindow = new UpdateWindow(new ControlCenter.Windows.UpdatePackages(Path.Combine(args[1], "fake-versions")));
+                        updateWindow.Show(); await Task.Delay(100); updateWindow.UpdateLayout(); Capture(updateWindow, Path.Combine(args[1], theme + "-updates.png")); updateWindow.Close();
+                    }
+                    File.WriteAllText(Path.Combine(args[1], "result.txt"), "PASS: search, microphone, brightness, media, output switch, scene execution/restore and preservation of later manual changes; favorites/all layout; pin/unpin and pinned deactivation; compact/narrow/expanded layout; native hit tests and retained geometry; settings footer, focus and backup dropdown; fake services only.");
                 }
                 catch (Exception ex) { File.WriteAllText(Path.Combine(args[1], "result.txt"), "FAIL: " + ex); Environment.ExitCode = 1; }
                 finally { panel.Exit(); app.Shutdown(); }
@@ -193,6 +233,19 @@ internal static class Program
     {
         public Task<ProxyResult> LocalAsync(ProxyConfig config, CancellationToken ct) => Task.FromResult(new ProxyResult(ProxyResultKind.LocalReachable));
         public Task<ProxyResult> RemoteAsync(ProxyConfig config, CancellationToken ct) => Task.FromResult(new ProxyResult(ProxyResultKind.HttpResponse, 403));
+    }
+    private sealed class FakeDesktop : IDesktopFeatures
+    {
+        private MicrophoneState mic = new("mic", "演示麦克风", false);
+        private DisplayBrightness display = new("display", "演示显示屏", 65);
+        private MediaSession media = new("player", "演示曲目", "演示播放器", true, true, true, true);
+        public string? Output { get; private set; }
+        public Task<DesktopSnapshot> ReadAsync(CancellationToken ct) => Task.FromResult(new DesktopSnapshot("82% · 已接电源", "演示网络 · 链路已连接", "演示蓝牙 · 已开启", mic, [display], [media], []));
+        public Task SetMicrophoneMuteAsync(string id, bool muted, CancellationToken ct) { mic = mic with { Muted = muted }; return Task.CompletedTask; }
+        public Task SetBrightnessAsync(string id, int value, CancellationToken ct) { display = display with { Percent = value }; return Task.CompletedTask; }
+        public Task MediaAsync(string id, string action, CancellationToken ct) { media = media with { Playing = !media.Playing }; return Task.CompletedTask; }
+        public Task SwitchOutputAsync(string id, CancellationToken ct) { Output = id; return Task.CompletedTask; }
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 }
 

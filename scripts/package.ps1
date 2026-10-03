@@ -27,6 +27,7 @@ foreach ($file in Get-ChildItem -LiteralPath $published -File -Recurse) {
 Copy-Item -LiteralPath 'docs/PACKAGE_README.md' -Destination (Join-Path $release 'README.md')
 Copy-Item -LiteralPath 'LICENSE','THIRD-PARTY-NOTICES.md','docs/config.schema.json','docs/CONFIGURATION_GUIDE.md','docs/AUDIO_COMPATIBILITY.md','docs/RELEASE_CHECKLIST.md','docs/USER_GUIDE.md','docs/MAINTENANCE.md' -Destination $release
 Copy-Item -LiteralPath 'artifacts/evidence/B6/dependencies.json' -Destination (Join-Path $release 'DEPENDENCIES.json')
+Copy-Item -LiteralPath '.tools/packages/microsoft.windows.sdk.net.ref/10.0.22621.57/microsoft.windows.sdk.net.ref.nuspec' -Destination (Join-Path $release 'WINDOWS-SDK-NET-METADATA.xml')
 if ($Mode -eq 'self-contained') {
     $licenses = Join-Path $release 'runtime-notices'
     New-Item -ItemType Directory -Force $licenses | Out-Null
@@ -53,7 +54,7 @@ $commit | Set-Content -LiteralPath (Join-Path $source 'SOURCE_COMMIT.txt') -Enco
 $payload = @(Get-ChildItem -LiteralPath $release -File -Recurse | ForEach-Object {
     [ordered]@{Path=[IO.Path]::GetRelativePath($release,$_.FullName); SHA256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash}
 })
-[ordered]@{Version='0.6.3';Commit=$commit;Mode=$Mode;Acceptance='Noninteractive only; real-machine acceptance pending';Files=$payload} |
+[ordered]@{Version='0.7.0';Commit=$commit;Mode=$Mode;Acceptance='Automated and fake-service UI acceptance; real-machine acceptance pending';Files=$payload} |
     ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $release 'RELEASE.json') -Encoding utf8
 $zip = 'artifacts/PersonalControlCenter-B6-CANDIDATE-' + $Mode + '.zip'
 Compress-Archive -Path (Join-Path $release '*') -DestinationPath $zip -Force

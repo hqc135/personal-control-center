@@ -2,7 +2,7 @@ using System.Collections.Immutable;
 using System.Runtime.InteropServices;
 using ControlCenter.Core;
 namespace ControlCenter.Windows.Audio;
-public sealed class CoreAudioService : IAudioService
+public sealed partial class CoreAudioService : IAudioService
 {
     private readonly NativeWorker worker;
     private readonly AudioNotifications notifications;

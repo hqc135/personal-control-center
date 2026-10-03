@@ -27,8 +27,15 @@ foreach ($lock in @(git ls-files '*packages.lock.json')) {
         }
     }
 }
+$projectionRoot = '.tools/packages/microsoft.windows.sdk.net.ref/10.0.22621.57'
 [ordered]@{
-    GeneratedAt=(Get-Date -Format o); RuntimeThirdPartyPackages=@();
+    GeneratedAt=(Get-Date -Format o); RuntimeThirdPartyPackages=@([ordered]@{
+        Id='Microsoft.Windows.SDK.NET.Ref'; Version='10.0.22621.57'; Scope='Windows projection runtime';
+        LicenseUrl='https://aka.ms/WinSDKLicenseURL';
+        ContentHash=(Get-Content -Raw ($projectionRoot + '/microsoft.windows.sdk.net.ref.10.0.22621.57.nupkg.sha512')).Trim();
+        Assemblies=@('Microsoft.Windows.SDK.NET.dll','WinRT.Runtime.dll');
+        MetadataSHA256=(Get-FileHash ($projectionRoot + '/microsoft.windows.sdk.net.ref.nuspec') -Algorithm SHA256).Hash
+    });
     VulnerabilityAudit='Not performed; offline inventory is not a vulnerability assessment.';
     Packages=@($items.Values | Sort-Object { $_.Id })
 } | ConvertTo-Json -Depth 6 | Set-Content artifacts/evidence/B6/dependencies.json -Encoding utf8

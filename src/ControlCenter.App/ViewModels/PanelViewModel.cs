@@ -28,6 +28,11 @@ public sealed class PanelViewModel : INotifyPropertyChanged, IDisposable
     public event Action? ShortcutSettingsRequested;
     public string DataOriginLabel { get; init; } = "真实系统状态";
     public SessionViewModel? Session { get; }
+    public DesktopViewModel Desktop { get; }
+    public IReadOnlyList<AudioDevice> OutputDevices => coordinator.Audio.Current.Value?.Devices.ToArray() ?? [];
+    private string searchText = "";
+    public string SearchText { get => searchText; set { searchText = value; Changed(); Changed(nameof(FilteredShortcuts)); } }
+    public IReadOnlyList<ShortcutDefinition> FilteredShortcuts => config.Shortcuts.Where(x => x.Label.Contains(searchText.Trim(), StringComparison.OrdinalIgnoreCase)).ToArray();
     public IReadOnlyList<string> Modules => config.Modules;
     public string AudioSwitchExplanation => AudioSwitchCapability.Current.Explanation;
     private void Changed([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new(name));
@@ -71,10 +76,11 @@ public sealed class PanelViewModel : INotifyPropertyChanged, IDisposable
     public RelayCommand Launch { get; }
     public RelayCommand Refresh { get; }
     public RelayCommand EditShortcuts { get; }
-    public PanelViewModel(ControlCoordinator coordinator, IShortcutLauncher launcher, AppConfig config, Action<Action> dispatch, SessionViewModel? session = null)
+    public PanelViewModel(ControlCoordinator coordinator, IShortcutLauncher launcher, AppConfig config, Action<Action> dispatch, SessionViewModel? session = null, DesktopViewModel? desktop = null)
     {
         this.coordinator = coordinator; this.launcher = launcher; this.config = config; this.dispatch = dispatch;
-        shortcuts = new(launcher); Session = session;
+        shortcuts = new(launcher); Session = session; Desktop = desktop ?? new(launcher);
+        Desktop.OperationCompleted += DesktopOperationCompleted;
         coordinator.SetModules(config.Modules.Contains("audio"), config.Modules.Contains("power"));
         Mute = new(p => { _ = RunMuteAsync(); }, p => AudioAvailable);
         ToggleDevices = new(p => DevicesOpen = !DevicesOpen);
@@ -82,7 +88,7 @@ public sealed class PanelViewModel : INotifyPropertyChanged, IDisposable
         PowerSettings = new(_ => { _ = RunAsync(() => launcher.OpenPowerSettingsAsync(CancellationToken.None)); });
         SelectPower = new(p => { if (p is Guid id) _ = RunAsync(() => coordinator.SetPowerAsync(id)); }, p => PowerAvailable && p is Guid id && coordinator.Power.Current.Value is { } current && current.ActiveId != id && current.Schemes.Any(x => x.Id == id));
         Launch = new(p => { if (p is ShortcutDefinition entry) _ = RunAsync(() => shortcuts.LaunchAsync(entry)); });
-        Refresh = new(p => { _ = coordinator.RefreshAsync(); });
+        Refresh = new(p => { _ = coordinator.RefreshAsync(); _ = Desktop.RefreshAsync(); });
         EditShortcuts = new(p => ShortcutSettingsRequested?.Invoke());
         coordinator.Audio.Changed += AudioChanged;
         coordinator.Power.Changed += PowerChanged;
@@ -130,6 +136,7 @@ public sealed class PanelViewModel : INotifyPropertyChanged, IDisposable
     private void AudioChanged() => dispatch(() => { if (!disposed) ApplyAudio(); });
     private void ApplyAudio()
     {
+        Changed(nameof(OutputDevices));
         var audio = coordinator.Audio.Current.Value;
         if (gestureActive && gestureEndpoint is not null && audio is not null && !audio.Devices.Any(x => x.Id == gestureEndpoint))
         {
@@ -150,14 +157,19 @@ public sealed class PanelViewModel : INotifyPropertyChanged, IDisposable
         state.Error ?? (state.IsRefreshing ? "正在刷新…" : state.IsStale ? "状态待刷新" : "已读取系统状态");
     public void UpdateConfig(AppConfig value)
     {
-        config = value; Changed(nameof(Shortcuts)); Changed(nameof(Modules));
+        if (!config.Modules.SequenceEqual(value.Modules)) Desktop.Save(Desktop.Preferences with { Favorites = value.Modules.Concat(Desktop.Preferences.Favorites.Where(x => x is not ("audio" or "power" or "awake" or "proxy" or "shortcuts"))).ToArray() });
+        config = value; Changed(nameof(Shortcuts)); Changed(nameof(FilteredShortcuts)); Changed(nameof(Modules));
         coordinator.SetModules(config.Modules.Contains("audio"), config.Modules.Contains("power"));
         Session?.UpdateConfig(value);
     }
     public void SetVisible(bool visible) { coordinator.SetVisible(visible); Session?.SetVisible(visible); }
+    public void EnableAllModules() { coordinator.SetModules(true, true); _ = coordinator.RefreshAsync(); }
+    private void DesktopOperationCompleted(string message) { if (!disposed) Notice = message; }
     public void Dispose()
     {
         disposed = true;
+        Desktop.OperationCompleted -= DesktopOperationCompleted;
+        Desktop.Dispose();
         Session?.Dispose();
         coordinator.Audio.Changed -= AudioChanged; coordinator.Power.Changed -= PowerChanged;
     }

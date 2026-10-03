@@ -33,6 +33,7 @@ public interface IPowerService : IAsyncDisposable
 }
 public interface IShortcutLauncher
 {
+    Task<CommandResult> OpenSettingsPageAsync(string page, CancellationToken ct) => Task.FromResult(new CommandResult(CommandOutcome.Failed, FailureCode.Unavailable, "当前模式不打开系统设置。"));
     Task<CommandResult> LaunchAsync(ShortcutDefinition shortcut, CancellationToken ct);
     Task<CommandResult> OpenSoundSettingsAsync(CancellationToken ct);
     Task<CommandResult> OpenPowerSettingsAsync(CancellationToken ct) => Task.FromResult(new CommandResult(CommandOutcome.Failed, FailureCode.Unavailable, "本模式不打开系统电源设置。"));

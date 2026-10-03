@@ -1,4 +1,16 @@
-# B4b 默认音频输出兼容门
+# 默认音频输出兼容性
+
+## 0.7.0 当前实现
+
+本轮用户要求完成全部扩展功能，新增直接输出切换，替代 B4b 的纯设置入口策略。AudioSwitchCapability.Available 现在表示兼容适配器已实现，不表示具体硬件组合已验证。
+
+CoreAudioService 的独立 partial 适配封装 Windows PolicyConfig 兼容接口。该接口并非承诺稳定的公开 API，失败时报告并提供系统设置入口。只修改 Console/Multimedia，Communications 保留。先确认目标为活动输出，逐角色写入并读回；恢复时仅恢复仍等于本次目标的角色，避免覆盖外部变化。
+
+麦克风操作显式读取的默认输入 ID；写入前确认默认输入未变化，操作后读取静音值。硬件断开或接口不可读时显示失败。假实现流程已验收，真实 OS/驱动/设备组合尚未验收。本次开发没有操作用户真实音频。
+
+接口布局参考：[EarTrumpet 的 PolicyConfig 声明](https://github.com/File-New-Project/EarTrumpet/blob/master/EarTrumpet/Interop/MMDeviceAPI/IPolicyConfig.cs)。本项目独立封装适配与恢复逻辑，没有引入整个第三方项目。
+
+## B4b 历史记录（不代表新版实现状态）
 
 2026-09-26。结论：**原生默认输出切换禁用，保留系统声音设置入口；音量/静音独立可用。**
 

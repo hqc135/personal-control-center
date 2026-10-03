@@ -94,10 +94,11 @@ public class IntegrationOptionsTests
         store.Denied = false; store.IgnoreWrite = true;
         Assert.Equal(CommandOutcome.UnknownOutcome, startup.Set(true, startup.Read()).Outcome);
     }
-    [Fact] public void AudioSwitchGateCannotBeEnabledByImportedExtension()
+    [Fact] public void LegacyAudioExtensionDoesNotAlterCompatibilityNotice()
     {
         var config = ConfigCodec.Decode(System.Text.Encoding.UTF8.GetBytes("""{"schemaVersion":1,"enableNativeAudioSwitch":true}"""));
-        Assert.False(AudioSwitchCapability.Current.Available);
+        Assert.True(AudioSwitchCapability.Current.Available);
+        Assert.Contains("未完成真机兼容验收", AudioSwitchCapability.Current.Explanation);
         Assert.Contains("系统声音设置", AudioSwitchCapability.Current.Explanation);
         Assert.NotNull(config.Additional);
     }

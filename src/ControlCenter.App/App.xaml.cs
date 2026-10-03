@@ -22,6 +22,7 @@ public partial class App : Application
     private IConfigRepository? repository;
     private ShortcutTrustStore? trust;
     private CoreAudioService? audio;
+    private DesktopFeatures? desktop;
     private PowerSchemeService? power;
     private ControlCoordinator? coordinator;
     private AwakeService? awake;
@@ -62,7 +63,9 @@ public partial class App : Application
             };
             awake = new(new ExecutionStateBackend());
             var session = new SessionViewModel(awake, new ProxyMonitor(new ProxyProbe(new ProxyTransport()), dispatch), launcher, config, dispatch);
-            var model = new PanelViewModel(coordinator, launcher, config, dispatch, session);
+            desktop = new DesktopFeatures(audio);
+            var features = new DesktopViewModel(launcher, desktop, new FeaturePreferencesStore(directory), new SceneRunner(coordinator, awake), config.Modules);
+            var model = new PanelViewModel(coordinator, launcher, config, dispatch, session, features);
             panel = new(model) { FontFamily = ThemeManager.PreferredFont(), MotionEnabled = config.Appearance.Motion != "off" };
             MainWindow = panel;
             if (loaded.Warning is not null) model.Notice = loaded.Warning;
@@ -76,7 +79,7 @@ public partial class App : Application
             catch (ServiceException ex) { model.Notice = ex.Message; }
             try
             {
-                tray = new(messageWindow.Handle, Path.Combine(AppContext.BaseDirectory, "Assets", "pcc.ico"), "个人控制中心 · 第六轮候选");
+                tray = new(messageWindow.Handle, Path.Combine(AppContext.BaseDirectory, "Assets", "pcc.ico"), "个人控制中心");
                 tray.Toggle += () => panel.Toggle(tray); tray.Menu += ShowMenu;
             }
             catch (IOException) { model.Notice = "托盘不可用，请使用窗口菜单退出。"; }
@@ -182,6 +185,7 @@ public partial class App : Application
     }
     private Task StopServicesAsync() => stopServices ??= Task.Run(async () =>
     {
+        try { if (desktop is not null) await desktop.DisposeAsync(); } catch { }
         await ShutdownSequence.RunAsync([
             (ShutdownModule.Awake, () => awake?.DisposeAsync().AsTask() ?? Task.CompletedTask),
             (ShutdownModule.Coordinator, () => coordinator?.DisposeAsync().AsTask() ?? Task.CompletedTask),

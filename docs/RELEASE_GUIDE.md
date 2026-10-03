@@ -1,18 +1,18 @@
 # 构建、验证与 Git 回退
 
-B6 / 0.6.3。项目 SDK 固定 10.0.401，.tools/dotnet，不改变系统 PATH。普通构建使用 Release、单 MSBuild 节点、BelowNormal、关闭共享编译；不会启动应用。测试不调用宿主音频、电源、热键、Run 登记、唤醒或网络接口。
+B6 / 0.7.0。项目 SDK 固定 10.0.401，.tools/dotnet，不改变系统 PATH。普通构建使用 Release、单 MSBuild 节点、BelowNormal、关闭共享编译；不会启动应用。测试不调用宿主音频、电源、热键、Run 登记、唤醒或网络接口。
 
 ## 框架依赖候选
 
 1. 新机器先安装/准备固定 SDK 并按锁文件恢复；本工作区依赖已缓存，可直接 -Offline。
 2. 完成源码修改，检查 Git diff，提交。打包要求干净工作区。
-3. scripts/build.ps1 -Offline -Publish；构建、174 项测试与发布连续执行。
+3. scripts/build.ps1 -Offline -Publish；构建、181 项测试与发布连续执行。
 4. scripts/dependency-inventory.ps1：本地锁文件与 NuGet 元数据清单。
 5. scripts/package.ps1；scripts/verify-package.ps1。
 
 build-framework-dependent.json 记录提交、脏状态、SDK 与发布文件 SHA256；打包拒绝脏提交、提交不匹配或文件变化。源码只取 Git 跟踪文件，运行包排除 PDB/验收工具/个人配置。RELEASE.json 记录提交、模式和全部其他包内文件的 SHA256；源码包附 SOURCE_COMMIT.txt。
 
-ZIP 压缩时间戳会变化，因此不承诺两次 ZIP 字节相同。B5 曾二次 Release 构建比较项目 DLL/EXE 哈希，证据在 artifacts/evidence/B5/reproducibility.json；该历史验证不代表 B6 或 0.6.3 已重复验证；仅证明同目录/同 SDK 的项目二进制复现，不宣称不同绝对路径、不同 SDK 或操作系统均相同。
+ZIP 压缩时间戳会变化，因此不承诺两次 ZIP 字节相同。B5 曾二次 Release 构建比较项目 DLL/EXE 哈希，证据在 artifacts/evidence/B5/reproducibility.json；该历史验证不代表 B6 或 0.7.0 已重复验证；仅证明同目录/同 SDK 的项目二进制复现，不宣称不同绝对路径、不同 SDK 或操作系统均相同。
 
 ## 自包含发布路径
 

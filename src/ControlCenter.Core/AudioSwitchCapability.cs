@@ -1,7 +1,7 @@
 namespace ControlCenter.Core;
 public sealed record AudioSwitchCapability(bool Available, string Explanation)
 {
-    // No validated environment is currently allowlisted. Configuration cannot override this gate.
-    public static AudioSwitchCapability Current { get; } = new(false,
-        "默认输出切换尚未通过此版本的兼容验证，请在系统声音设置中切换。");
+    // Implementation availability, not a guarantee of compatibility with a particular device/OS build.
+    public static AudioSwitchCapability Current { get; } = new(true,
+        "直接切换使用 Windows 兼容接口；未完成真机兼容验收，失败时请使用系统声音设置。");
 }

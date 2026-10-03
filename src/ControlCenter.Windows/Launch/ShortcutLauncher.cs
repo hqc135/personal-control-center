@@ -64,6 +64,8 @@ public sealed class ShortcutLauncher(IShortcutTrustStore trust, ILaunchPlatform 
         { return new(CommandOutcome.Failed, FailureCode.NativeFailure, "入口无法打开，请在设置中检查目标。"); }
     }, ct);
     public Task<CommandResult> OpenSoundSettingsAsync(CancellationToken ct) => OpenSettingsAsync("ms-settings:sound", ct);
+    public Task<CommandResult> OpenSettingsPageAsync(string page, CancellationToken ct) => SettingsPages.Uris.TryGetValue(page, out var uri)
+        ? OpenSettingsAsync(uri, ct) : Task.FromResult(new CommandResult(CommandOutcome.Failed, FailureCode.InvalidConfiguration, "未知设置入口。"));
     public Task<CommandResult> OpenPowerSettingsAsync(CancellationToken ct) => OpenSettingsAsync("ms-settings:powersleep", ct);
     private Task<CommandResult> OpenSettingsAsync(string uri, CancellationToken ct) => Task.Run(() =>
     {
