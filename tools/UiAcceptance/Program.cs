@@ -19,7 +19,7 @@ internal static class Program
         var config = new AppConfig { Proxy = new(TestUrl: "https://example.com/") };
         var awake = new FakeAwake();
         var desktopService = new FakeDesktop();
-        var desktop = new DesktopViewModel(new FakeLauncher(), desktopService, scenes: new SceneRunner(coordinator, awake));
+        var desktop = new DesktopViewModel(new FakeLauncher(), desktopService, scenes: new SceneRunner(coordinator, awake), audio: desktopService, brightness: desktopService);
         var session = new SessionViewModel(awake, new ProxyMonitor(new FakeProxy(), dispatch), new FakeLauncher(), config, dispatch);
         var model = new PanelViewModel(coordinator, new FakeLauncher(), config, dispatch, session, desktop)
         { DataOriginLabel = "演示数据 · UI 验收工具", Notice = "所有服务是假实现，不会改动系统。" };
@@ -124,7 +124,7 @@ internal static class Program
                     if (model.FilteredShortcuts.Count != 1) throw new Exception("Shortcut search did not find configured item");
                     model.SearchText = "";
                     await desktop.RefreshAsync();
-                    await desktop.RunAsync(ct => desktopService.SetMicrophoneMuteAsync("mic", true, ct));
+                    await desktop.ToggleMicrophoneAsync();
                     if (desktop.Snapshot?.Microphone?.Muted != true) throw new Exception("Microphone state not read back");
                     await desktop.SetBrightnessAsync("display", 42);
                     if (desktop.Displays.Single().Percent != 42) throw new Exception("Brightness state not read back");
@@ -285,15 +285,17 @@ internal static class Program
         public Task<ProxyResult> LocalAsync(ProxyConfig config, CancellationToken ct) => Task.FromResult(new ProxyResult(ProxyResultKind.LocalReachable));
         public Task<ProxyResult> RemoteAsync(ProxyConfig config, CancellationToken ct) => Task.FromResult(new ProxyResult(ProxyResultKind.HttpResponse, 403));
     }
-    private sealed class FakeDesktop : IDesktopFeatures
+    private sealed class FakeDesktop : IDesktopFeatures, IAudioDevices, IBrightnessService
     {
+        public Task<MicrophoneState?> ReadMicrophoneAsync(CancellationToken ct) => Task.FromResult<MicrophoneState?>(mic);
+        Task<DisplayBrightness[]> IBrightnessService.ReadAsync(CancellationToken ct) => Task.FromResult(new[] { display });
         private MicrophoneState mic = new("mic", "演示麦克风", false);
         private DisplayBrightness display = new("display", "演示显示屏", 65);
         private MediaSession media = new("player", "演示曲目", "演示播放器", true, true, true, true);
         public string? Output { get; private set; }
         public Task<DesktopSnapshot> ReadAsync(CancellationToken ct) => Task.FromResult(new DesktopSnapshot("82% · 已接电源", "演示网络 · 链路已连接", "演示蓝牙 · 已开启", mic, [display], [media], []));
         public Task SetMicrophoneMuteAsync(string id, bool muted, CancellationToken ct) { mic = mic with { Muted = muted }; return Task.CompletedTask; }
-        public Task SetBrightnessAsync(string id, int value, CancellationToken ct) { display = display with { Percent = value }; return Task.CompletedTask; }
+        public Task SetAsync(string id, int value, CancellationToken ct) { display = display with { Percent = value }; return Task.CompletedTask; }
         public Task MediaAsync(string id, string action, CancellationToken ct) { media = media with { Playing = !media.Playing }; return Task.CompletedTask; }
         public Task SwitchOutputAsync(string id, CancellationToken ct) { Output = id; return Task.CompletedTask; }
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;

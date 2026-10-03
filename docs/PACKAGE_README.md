@@ -1,4 +1,4 @@
-# 个人控制中心 0.8.0
+# 个人控制中心 0.8.1
 
 完整解压 ZIP，双击 PersonalControlCenter.exe 即可使用。Windows 11 x64，内部版本 22621 或更高。发布的 win-x64 ZIP 已包含 .NET 10 桌面运行时，不需要安装器或管理员权限。不要只复制 EXE。
 
@@ -12,7 +12,7 @@
 
 详细操作见 USER_GUIDE.md；维护见 MAINTENANCE.md。包内 RELEASE.json 记录模式、提交及文件哈希。若自行构建 framework-dependent 模式，仍需另外安装 .NET 10 Desktop Runtime。
 
-本版为未签名预发布候选。197 项自动测试及假数据界面验收通过；真实系统控制、实际性能及多屏/DPI 的完整验收仍待完成，不将打包成功视为全功能真机通过。
+本版为未签名预发布候选。199 项自动测试及假数据界面验收通过；真实系统控制、实际性能及多屏/DPI 的完整验收仍待完成，不将打包成功视为全功能真机通过。
 
 
-0.8.0 新增六套配色与 CSS 自定义。设置 → 外观中预览和保存；详见 THEMES.md，示例见 theme.example.css。
+0.8.1 新增六套配色与 CSS 自定义。设置 → 外观中预览和保存；详见 THEMES.md，示例见 theme.example.css。

@@ -6,9 +6,8 @@ using Windows.Devices.Radios;
 using Windows.Media.Control;
 namespace ControlCenter.Windows;
 
-public sealed class DesktopFeatures(CoreAudioService audio) : IDesktopFeatures
+public sealed class DesktopFeatures(CoreAudioService audio, BrightnessService brightness) : IDesktopFeatures
 {
-    private readonly BrightnessService brightness = new();
     private readonly SemaphoreSlim gate = new(1, 1);
     private GlobalSystemMediaTransportControlsSessionManager? manager;
     public async Task<DesktopSnapshot> ReadAsync(CancellationToken ct)
@@ -73,9 +72,6 @@ public sealed class DesktopFeatures(CoreAudioService audio) : IDesktopFeatures
         }
         finally { gate.Release(); }
     }
-    public Task SetMicrophoneMuteAsync(string id, bool muted, CancellationToken ct) => audio.SetMicrophoneMuteAsync(id, muted, ct);
-    public Task SwitchOutputAsync(string id, CancellationToken ct) => audio.SwitchOutputAsync(id, ct);
-    public Task SetBrightnessAsync(string id, int percent, CancellationToken ct) => brightness.SetAsync(id, percent, ct);
     public async Task MediaAsync(string id, string action, CancellationToken ct)
     {
         manager ??= await GlobalSystemMediaTransportControlsSessionManager.RequestAsync().AsTask(ct);
@@ -90,7 +86,6 @@ public sealed class DesktopFeatures(CoreAudioService audio) : IDesktopFeatures
         };
         if (!accepted) throw new ServiceException(FailureCode.Unavailable, "播放器未接受操作。");
     }
-    public ValueTask DisposeAsync() => brightness.DisposeAsync();
     [StructLayout(LayoutKind.Sequential)] private struct PowerStatus
     { public byte ACLineStatus, BatteryFlag, BatteryLifePercent, SystemStatusFlag; public uint BatteryLifeTime, BatteryFullLifeTime; }
     [DllImport("kernel32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool GetSystemPowerStatus(out PowerStatus status);

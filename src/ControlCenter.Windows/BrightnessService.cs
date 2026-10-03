@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using ControlCenter.Core;
 namespace ControlCenter.Windows;
-public sealed class BrightnessService : IAsyncDisposable
+public sealed class BrightnessService : IBrightnessService
 {
     private readonly NativeWorker worker = new("PCC brightness", () => { });
     public Task<DisplayBrightness[]> ReadAsync(CancellationToken ct) => worker.InvokeAsync(() =>

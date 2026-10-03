@@ -7,7 +7,8 @@ if (args.Length == 1 && args[0] is "--desktop" or "--desktop-repeat")
     using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(25));
     await using var audio = new CoreAudioService();
     await using var power = new PowerSchemeService();
-    await using var desktop = new DesktopFeatures(audio);
+    await using var brightness = new BrightnessService();
+    var desktop = new DesktopFeatures(audio, brightness);
     try
     {
         var a = await audio.ReadAsync(timeout.Token).WaitAsync(timeout.Token);

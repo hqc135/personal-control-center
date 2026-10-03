@@ -22,7 +22,7 @@ public partial class App : Application
     private IConfigRepository? repository;
     private ShortcutTrustStore? trust;
     private CoreAudioService? audio;
-    private DesktopFeatures? desktop;
+    private BrightnessService? brightness;
     private PowerSchemeService? power;
     private ControlCoordinator? coordinator;
     private AwakeService? awake;
@@ -63,8 +63,9 @@ public partial class App : Application
             };
             awake = new(new ExecutionStateBackend());
             var session = new SessionViewModel(awake, new ProxyMonitor(new ProxyProbe(new ProxyTransport()), dispatch), launcher, config, dispatch);
-            desktop = new DesktopFeatures(audio);
-            var features = new DesktopViewModel(launcher, desktop, new FeaturePreferencesStore(directory), new SceneRunner(coordinator, awake), config.Modules);
+            brightness = new BrightnessService();
+            var desktop = new DesktopFeatures(audio, brightness);
+            var features = new DesktopViewModel(launcher, desktop, new FeaturePreferencesStore(directory), new SceneRunner(coordinator, awake), config.Modules, audio, brightness);
             var model = new PanelViewModel(coordinator, launcher, config, dispatch, session, features);
             panel = new(model) { FontFamily = ThemeManager.PreferredFont(), MotionEnabled = config.Appearance.Motion != "off" };
             MainWindow = panel;
@@ -185,7 +186,7 @@ public partial class App : Application
     }
     private Task StopServicesAsync() => stopServices ??= Task.Run(async () =>
     {
-        try { if (desktop is not null) await desktop.DisposeAsync(); } catch { }
+        try { if (brightness is not null) await brightness.DisposeAsync(); } catch { }
         await ShutdownSequence.RunAsync([
             (ShutdownModule.Awake, () => awake?.DisposeAsync().AsTask() ?? Task.CompletedTask),
             (ShutdownModule.Coordinator, () => coordinator?.DisposeAsync().AsTask() ?? Task.CompletedTask),

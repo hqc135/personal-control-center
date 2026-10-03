@@ -6,13 +6,22 @@ public sealed record MediaSession(string Id, string Title, string Artist, bool P
 { public string StateLabel => Playing ? "正在播放" : "已暂停"; }
 public sealed record DesktopSnapshot(string Battery, string Network, string Bluetooth, MicrophoneState? Microphone,
     DisplayBrightness[] Displays, MediaSession[] Media, string[] Warnings);
-public interface IDesktopFeatures : IAsyncDisposable
+public interface IDesktopFeatures
 {
     Task<DesktopSnapshot> ReadAsync(CancellationToken ct);
-    Task SetMicrophoneMuteAsync(string id, bool muted, CancellationToken ct);
-    Task SetBrightnessAsync(string id, int percent, CancellationToken ct);
     Task MediaAsync(string id, string action, CancellationToken ct);
+}
+// Each interface is implemented directly by its Windows service; there is no forwarding facade.
+public interface IAudioDevices
+{
+    Task<MicrophoneState?> ReadMicrophoneAsync(CancellationToken ct);
+    Task SetMicrophoneMuteAsync(string id, bool muted, CancellationToken ct);
     Task SwitchOutputAsync(string id, CancellationToken ct);
+}
+public interface IBrightnessService : IAsyncDisposable
+{
+    Task<DisplayBrightness[]> ReadAsync(CancellationToken ct);
+    Task SetAsync(string id, int percent, CancellationToken ct);
 }
 public static class SettingsPages
 {

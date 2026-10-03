@@ -4,6 +4,8 @@ namespace ControlCenter.App.ViewModels;
 public sealed class DesktopViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly IDesktopFeatures? service;
+    private readonly IAudioDevices? audio;
+    private readonly IBrightnessService? brightness;
     private readonly IFeaturePreferencesStore? store;
     private readonly IShortcutLauncher launcher;
     private readonly CancellationTokenSource lifetime = new();
@@ -24,13 +26,13 @@ public sealed class DesktopViewModel : INotifyPropertyChanged, IDisposable
     public RelayCommand MuteMicrophone { get; }
     public RelayCommand OpenSettings { get; }
     public bool Busy => busy;
-    public DesktopViewModel(IShortcutLauncher launcher, IDesktopFeatures? service = null, IFeaturePreferencesStore? store = null, SceneRunner? scenes = null, string[]? defaultFavorites = null)
+    public DesktopViewModel(IShortcutLauncher launcher, IDesktopFeatures? service = null, IFeaturePreferencesStore? store = null, SceneRunner? scenes = null, string[]? defaultFavorites = null, IAudioDevices? audio = null, IBrightnessService? brightness = null)
     {
-        this.launcher = launcher; this.service = service; this.store = store; Scenes = scenes;
+        this.launcher = launcher; this.service = service; this.audio = audio; this.brightness = brightness; this.store = store; Scenes = scenes;
         try { var defaults = new FeaturePreferences { Favorites = defaultFavorites ?? Preferences.Favorites }; Preferences = store?.Load(defaults) ?? defaults; }
         catch { preferencesReadOnly = true; Status = "功能配置读取失败，原文件保留；本次不保存布局或场景。"; }
         Refresh = new(_ => { _ = RefreshAsync(); }, _ => !busy && !disposed);
-        MuteMicrophone = new(_ => { if (Snapshot?.Microphone is { } m) _ = RunAsync(ct => service!.SetMicrophoneMuteAsync(m.Id, !m.Muted, ct)); }, _ => !busy && !disposed && service is not null && Snapshot?.Microphone is not null);
+        MuteMicrophone = new(_ => { _ = ToggleMicrophoneAsync(); }, _ => !busy && !disposed && audio is not null && Snapshot?.Microphone is not null);
         OpenSettings = new(p => { if (p is string key) _ = OpenSettingsAsync(key); });
     }
     public async Task RefreshAsync()
@@ -46,7 +48,7 @@ public sealed class DesktopViewModel : INotifyPropertyChanged, IDisposable
         catch { Snapshot = null; Status = "设备状态读取失败，请刷新；旧数据未作为当前状态显示。"; }
         finally { busy = false; if (!disposed) Notify(); }
     }
-    public async Task RunAsync(Func<CancellationToken, Task> action)
+    private async Task RunAsync(Func<CancellationToken, Task> action)
     {
         if (busy || disposed || service is null) return;
         busy = true; Status = "操作中…"; Notify();
@@ -59,9 +61,11 @@ public sealed class DesktopViewModel : INotifyPropertyChanged, IDisposable
         if (!disposed) OperationCompleted?.Invoke(error ?? "操作已提交，已刷新设备状态。");
         if (!disposed) Notify();
     }
-    public Task SetBrightnessAsync(string id, int value) => RunAsync(ct => service!.SetBrightnessAsync(id, value, ct));
+    public Task ToggleMicrophoneAsync() => Snapshot?.Microphone is { } m && audio is not null
+        ? RunAsync(ct => audio.SetMicrophoneMuteAsync(m.Id, !m.Muted, ct)) : Task.CompletedTask;
+    public Task SetBrightnessAsync(string id, int value) => RunAsync(ct => brightness!.SetAsync(id, value, ct));
     public Task MediaAsync(string id, string action) => RunAsync(ct => service!.MediaAsync(id, action, ct));
-    public Task SwitchOutputAsync(string id) => RunAsync(ct => service!.SwitchOutputAsync(id, ct));
+    public Task SwitchOutputAsync(string id) => RunAsync(ct => audio!.SwitchOutputAsync(id, ct));
     private async Task OpenSettingsAsync(string key)
     {
         try { var result = await launcher.OpenSettingsPageAsync(key, lifetime.Token); Status = result.Message ?? (result.Outcome == CommandOutcome.Confirmed ? "已打开系统设置" : "系统设置未打开"); }
