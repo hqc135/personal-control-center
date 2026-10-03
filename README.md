@@ -2,9 +2,15 @@
 
 一个放在 Windows 托盘里的轻量控制面板，集中管理音量、电源方案、临时保持唤醒、代理检测和常用入口。
 
+主面板采用紧凑卡片：声音与代理横向展开，电源和保持唤醒并排；缩窄窗口后自动改为单列。操作说明与高级选项按需展开。
+
+![深色控制中心，截图使用演示数据](docs/images/control-center-dark.png)
+
+截图为假数据验收窗口，实际状态来自你的电脑。支持浅色与深色主题。
+
 ## 下载与使用
 
-**[下载 Windows x64 免安装 ZIP](https://github.com/hqc135/personal-control-center/releases/download/v0.6.2/PersonalControlCenter-0.6.2-win-x64.zip)** · [查看发布说明](https://github.com/hqc135/personal-control-center/releases/tag/v0.6.2)
+**[下载 Windows x64 免安装 ZIP](https://github.com/hqc135/personal-control-center/releases/download/v0.6.3/PersonalControlCenter-0.6.3-win-x64.zip)** · [查看发布说明](https://github.com/hqc135/personal-control-center/releases/tag/v0.6.3)
 
 1. 下载 ZIP，完整解压到你想放置的目录。
 2. 双击 `PersonalControlCenter.exe`，即可使用。
@@ -37,4 +43,4 @@
 - [维护说明](docs/MAINTENANCE.md)：源码结构、开发环境、构建测试和发布流程。
 - [验收记录](docs/acceptance/UI-2026-10-02.md) · [发布检查](docs/RELEASE_CHECKLIST.md)
 
-当前版本 **0.6.2 预发布版**。174 项自动测试和假数据界面验收通过；真实系统控制、性能、多屏/DPI 等完整矩阵仍待验收。程序未签名，当前用于个人试用。
+当前版本 **0.6.3 预发布版**。174 项自动测试和假数据界面验收通过；真实系统控制、性能、多屏/DPI 等完整矩阵仍待验收。程序未签名，当前用于个人试用。

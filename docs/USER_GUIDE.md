@@ -1,10 +1,12 @@
 # 使用说明
 
-适用版本：0.6.2 候选。Windows 11 x64，内部版本 22621 或更高；GitHub Release 的免安装 ZIP 已包含 .NET 10 Windows Desktop Runtime x64，普通使用无需另外安装 .NET 或 SDK。
+适用版本：0.6.3 候选。Windows 11 x64，内部版本 22621 或更高；GitHub Release 的免安装 ZIP 已包含 .NET 10 Windows Desktop Runtime x64，普通使用无需另外安装 .NET 或 SDK。
+
+主面板中的电源与保持唤醒卡在宽窗口并排，在窄窗口自动上下排列。点“方案与设置”“时长与选项”“连接详情与测试”可展开详细操作；展开后可滚动浏览。拖动顶部移动窗口，拖动边缘调整大小。声音卡上的“设备”展开输出设备信息。
 
 ## 获取与启动
 
-从 [Release 下载应用 ZIP](https://github.com/hqc135/personal-control-center/releases/download/v0.6.2/PersonalControlCenter-0.6.2-win-x64.zip)。私有仓库需登录有权限的 GitHub 账号。不要下载 Source code，那是开发源码。下载后：
+从 [Release 下载应用 ZIP](https://github.com/hqc135/personal-control-center/releases/download/v0.6.3/PersonalControlCenter-0.6.3-win-x64.zip)。私有仓库需登录有权限的 GitHub 账号。不要下载 Source code，那是开发源码。下载后：
 
 1. 将整个 ZIP 解压到固定目录，保留所有 DLL、runtimeconfig.json 和 Assets，不能只复制 EXE。
 2. 双击 PersonalControlCenter.exe，默认显示面板；无需管理员权限。

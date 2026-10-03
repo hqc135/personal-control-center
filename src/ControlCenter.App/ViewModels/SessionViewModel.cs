@@ -15,6 +15,15 @@ public sealed class SessionViewModel : INotifyPropertyChanged, IDisposable
     public event PropertyChangedEventHandler? PropertyChanged;
     public string Minutes { get; set; } = "30";
     public bool KeepDisplay { get; set; }
+    public bool AwakeActive => awake.Current.Status == AwakeStatus.Active;
+    public string AwakeSummary => awake.Current.Status == AwakeStatus.Off ? "未开启" : AwakeText;
+    public string ProxyAddress => $"{config.Proxy.Host}:{config.Proxy.Port}";
+    public string ProxySummary => proxy.Local?.Kind switch
+    {
+        ProxyResultKind.LocalReachable => "本机端口可达",
+        null => "尚未检测",
+        _ => proxy.Local.Message
+    };
     public string AwakeText => awake.Current.Status switch
     {
         AwakeStatus.Active => $"剩余 {Math.Ceiling(awake.Current.Remaining.TotalMinutes)} 分钟 · " + (awake.Current.KeepDisplay ? "屏幕常亮" : "允许屏幕熄灭"),

@@ -67,11 +67,11 @@ $env:DOTNET_GENERATE_ASPNET_CERTIFICATE = 'false'
 ./scripts/verify-package.ps1
 ```
 
-现有脚本使用 B6 路径；当前版本 0.6.2。新增迭代时同步修改 App csproj、package.ps1 的版本、各脚本产物/证据目录与当前文档。不要批量替换历史验收记录。
+现有脚本使用 B6 路径；当前版本 0.6.3。新增迭代时同步修改 App csproj、package.ps1 的版本、各脚本产物/证据目录与当前文档。不要批量替换历史验收记录。
 
 构建收据、包内 RELEASE.json 与源码包 SOURCE_COMMIT.txt 必须指向同一干净提交。依赖清单是本地许可元数据盘点，不等同在线漏洞审计。ZIP 时间戳不同，不承诺压缩包字节级复现；B5 曾完成同目录二次二进制比较，不能外推为后续每版验证。
 
-GitHub Release 默认交付 self-contained win-x64，运行时来自官方 NuGet 包并核对 SHA512；准备好运行时后构建时加 -SelfContained，打包与校验时加 -Mode self-contained。framework-dependent 保留为开发选项。详情见 RELEASE_GUIDE.md。普通提交不把 ZIP 放进 Git；如需发布下载包，单独创建候选 Release，附运行包、SHA256 和验收边界，并回读验证附件。当前发布标签 v0.6.2，应用附件名 PersonalControlCenter-0.6.2-win-x64.zip，采用预发布状态。Release 应先以 draft 上传并校验附件，再发布；首页链接须匹配实际附件名。
+GitHub Release 默认交付 self-contained win-x64，运行时来自官方 NuGet 包并核对 SHA512；准备好运行时后构建时加 -SelfContained，打包与校验时加 -Mode self-contained。framework-dependent 保留为开发选项。详情见 RELEASE_GUIDE.md。普通提交不把 ZIP 放进 Git；如需发布下载包，单独创建候选 Release，附运行包、SHA256 和验收边界，并回读验证附件。当前发布标签 v0.6.3，应用附件名 PersonalControlCenter-0.6.3-win-x64.zip，采用预发布状态。Release 应先以 draft 上传并校验附件，再发布；首页链接须匹配实际附件名。
 
 ## 故障与回退
 
