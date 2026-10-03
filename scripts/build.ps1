@@ -32,7 +32,7 @@ if ($Publish) {
     $mode = if ($SelfContained) { 'self-contained' } else { 'framework-dependent' }
     $output = 'artifacts/B6-CANDIDATE-' + $mode
     if ($SelfContained) {
-        & $dotnet publish src/ControlCenter.App -c Release -r win-x64 --self-contained true --source (Join-Path (Get-Location) '.tools/runtime-feed') --source $env:NUGET_PACKAGES -p:NuGetAudit=false -p:RestorePackagesWithLockFile=true -p:NuGetLockFilePath=obj/self-contained.packages.lock.json -p:RuntimeFrameworkVersion=10.0.12 -p:PublishTrimmed=false -p:PublishReadyToRun=false -m:1 -p:UseSharedCompilation=false -o $output
+        & $dotnet publish src/ControlCenter.App -c Release -r win-x64 --self-contained true --source (Join-Path (Get-Location) '.tools/runtime-feed') --source $env:NUGET_PACKAGES -p:NuGetAudit=false -p:RestorePackagesWithLockFile=true -p:NuGetLockFilePath=obj/self-contained.packages.lock.json -p:TargetLatestRuntimePatch=true -p:PublishTrimmed=false -p:PublishReadyToRun=false -m:1 -p:UseSharedCompilation=false -o $output
     } else {
         & $dotnet publish src/ControlCenter.App -c Release --no-restore --no-build --self-contained false -o $output
     }
