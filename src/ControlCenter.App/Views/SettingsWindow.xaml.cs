@@ -30,6 +30,7 @@ public partial class SettingsWindow : Window
         shortcuts = new(config.Shortcuts); ShortcutList.ItemsSource = shortcuts;
         ModuleList.ItemsSource = modules;
         FontFamily = ThemeManager.PreferredFont();
+        PalettePicker.ItemsSource = AppearanceStyles.Palettes;
         LoadDraft(config);
         HotkeyStatus.Text = hotkeyStatus ?? "本会话未注册快捷键。";
         Loaded += async (_, _) => await LoadLocalOptionsAsync();
@@ -51,6 +52,9 @@ public partial class SettingsWindow : Window
         SystemTheme.IsChecked = config.Appearance.Theme == "system";
         LightTheme.IsChecked = config.Appearance.Theme == "light";
         DarkTheme.IsChecked = config.Appearance.Theme == "dark";
+        PalettePicker.SelectedValue = config.Appearance.Palette;
+        CssEditor.Text = config.Appearance.CustomCss;
+        Resources.Clear();
         Motion.IsChecked = config.Appearance.Motion != "off";
         ProxyHost.Text = config.Proxy.Host; ProxyPort.Text = config.Proxy.Port.ToString();
         ProxyTarget.Text = config.Proxy.TestUrl ?? ""; proxyShortcutId = config.Proxy.ShortcutId;
@@ -60,13 +64,57 @@ public partial class SettingsWindow : Window
     private AppConfig ReadDraft()
     {
         if (!int.TryParse(ProxyPort.Text, out int port)) throw new InvalidDataException("端口须为 1–65535。");
-        var theme = DarkTheme.IsChecked == true ? "dark" : LightTheme.IsChecked == true ? "light" : "system";
+
         var config = original with {
-            Appearance = original.Appearance with { Theme = theme, Motion = Motion.IsChecked == true ? "subtle" : "off" },
+            Appearance = ReadAppearance(),
             Shortcuts = shortcuts.ToArray(), Modules = modules.Where(x => x.Enabled).Select(x => x.Id).ToArray(), Hotkey = HotkeyPolicy.Parse(HotkeyText.Text),
             Proxy = original.Proxy with { Host = ProxyHost.Text.Trim(), Port = port, TestUrl = string.IsNullOrWhiteSpace(ProxyTarget.Text) ? null : ProxyTarget.Text.Trim(), ShortcutId = proxyShortcutId }
         };
         ConfigCodec.Validate(config); return config;
+    }
+    private AppearanceConfig ReadAppearance() => original.Appearance with
+    {
+        Theme = DarkTheme.IsChecked == true ? "dark" : LightTheme.IsChecked == true ? "light" : "system",
+        Palette = PalettePicker.SelectedValue as string ?? "graphite", CustomCss = CssEditor.Text,
+        Motion = Motion.IsChecked == true ? "subtle" : "off"
+    };
+    private void PreviewAppearance_Click(object sender, RoutedEventArgs e)
+    {
+        try { ThemeManager.Apply(ReadAppearance(), Resources); AppearanceStatus.Text = "预览已更新；保存后应用到全部窗口。Windows 高对比度优先使用系统颜色。"; }
+        catch (InvalidDataException ex) { AppearanceStatus.Text = ex.Message + " 已保留上次有效预览。"; }
+    }
+    private void ResetAppearance_Click(object sender, RoutedEventArgs e)
+    {
+        SystemTheme.IsChecked = true; PalettePicker.SelectedValue = "graphite"; CssEditor.Clear();
+        PreviewAppearance_Click(sender, e);
+    }
+    private void CssExample_Click(object sender, RoutedEventArgs e) { CssEditor.Text = AppearanceStyles.Example; }
+    private void CssClear_Click(object sender, RoutedEventArgs e) { CssEditor.Clear(); PreviewAppearance_Click(sender, e); }
+    private void CssImport_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog { Filter = "CSS 主题 (*.css)|*.css", CheckFileExists = true };
+        if (dialog.ShowDialog(this) != true) return;
+        try
+        {
+            using var stream = File.OpenRead(dialog.FileName);
+            if (stream.Length > AppearanceStyles.MaxCssLength * 4) throw new InvalidDataException("CSS 文件过大。");
+            using var reader = new StreamReader(stream);
+            var buffer = new char[AppearanceStyles.MaxCssLength + 1];
+            int count = reader.ReadBlock(buffer, 0, buffer.Length);
+            var css = new string(buffer, 0, count); _ = AppearanceStyles.ParseCss(css, false);
+            CssEditor.Text = css; AppearanceStatus.Text = "已导入草稿，可预览；保存后生效。";
+        }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException) { AppearanceStatus.Text = "导入失败：" + ex.Message; }
+    }
+    private void CssExport_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            _ = AppearanceStyles.ParseCss(CssEditor.Text, false);
+            var dialog = new SaveFileDialog { Filter = "CSS 主题 (*.css)|*.css", FileName = "control-center-theme.css", DefaultExt = ".css" };
+            if (dialog.ShowDialog(this) == true) { File.WriteAllText(dialog.FileName, CssEditor.Text); AppearanceStatus.Text = "已导出 CSS 变量；接收方仍需选择基础配色。"; }
+        }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException) { AppearanceStatus.Text = "导出失败：" + ex.Message; }
     }
     private void Edited(object sender, RoutedEventArgs e) { if (ready) dirty = true; }
     private async void Save_Click(object sender, RoutedEventArgs e)
@@ -234,4 +282,3 @@ public sealed class ModuleOption(string id, bool enabled)
     public bool Enabled { get; set; } = enabled;
     public string Label => Id switch { "audio" => "声音", "power" => "电源", "awake" => "保持唤醒", "proxy" => "代理", _ => "常用入口" };
 }
-

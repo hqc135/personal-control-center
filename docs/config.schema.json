@@ -31,6 +31,24 @@
         },
         "material": {
           "const": "solid"
+        },
+        "palette": {
+          "type": "string",
+          "enum": [
+            "graphite",
+            "ocean",
+            "mint",
+            "lavender",
+            "rose",
+            "sand"
+          ],
+          "default": "graphite"
+        },
+        "customCss": {
+          "type": "string",
+          "description": "受限 CSS 主题变量；见 THEMES.md。",
+          "maxLength": 16384,
+          "default": ""
         }
       },
       "additionalProperties": true

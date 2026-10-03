@@ -7,6 +7,18 @@ Title="设置 · 个人控制中心" Width="520" MinWidth="440" Height="700" Min
 <RadioButton x:Name="SystemTheme" Content="跟随 Windows" GroupName="Theme" Checked="Edited"/>
 <RadioButton x:Name="LightTheme" Content="浅色" GroupName="Theme" Checked="Edited"/>
 <RadioButton x:Name="DarkTheme" Content="深色" GroupName="Theme" Checked="Edited"/>
+<TextBlock Text="配色方案" Margin="0,12,0,5"/>
+<ComboBox x:Name="PalettePicker" DisplayMemberPath="Name" SelectedValuePath="Id" SelectionChanged="Edited" AutomationProperties.Name="配色方案"/>
+<Expander Header="自定义 CSS 主题" Margin="0,12,0,8">
+<StackPanel Margin="0,8,0,0">
+<TextBlock Text="支持颜色、卡片圆角与间距、按钮圆角变量。不是完整网页 CSS；空白表示沿用配色。" Style="{StaticResource Secondary}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+<TextBox x:Name="CssEditor" VerticalContentAlignment="Top" AcceptsReturn="True" AcceptsTab="True" Height="170" MaxLength="16384" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" FontFamily="Consolas" TextChanged="Edited" AutomationProperties.Name="自定义 CSS"/>
+<WrapPanel Margin="0,8,0,0"><Button Content="填入示例" Click="CssExample_Click" Margin="0,0,6,6"/><Button Content="导入 CSS" Click="CssImport_Click" Margin="0,0,6,6"/><Button Content="导出 CSS" Click="CssExport_Click" Margin="0,0,6,6"/><Button Content="清空自定义" Click="CssClear_Click" Margin="0,0,6,6"/></WrapPanel>
+</StackPanel>
+</Expander>
+<WrapPanel><Button Content="预览配色" Click="PreviewAppearance_Click" Margin="0,0,8,8"/><Button Content="恢复默认外观" Click="ResetAppearance_Click" Margin="0,0,0,8"/></WrapPanel>
+<TextBlock x:Name="AppearanceStatus" Text="预览仅作用于此设置窗口；保存后应用到全部窗口。" Style="{StaticResource Secondary}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+<Border Style="{StaticResource Card}"><StackPanel><TextBlock Text="配色预览" FontWeight="SemiBold"/><TextBlock Text="正文与次要说明" Style="{StaticResource Secondary}" Margin="0,6"/><Button Content="强调按钮" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Left" IsHitTestVisible="False" Focusable="False"/></StackPanel></Border>
 <CheckBox x:Name="Motion" Content="轻微开合动画" Margin="0,10,0,4" Checked="Edited" Unchecked="Edited"/>
 <TextBlock Text="尊重 Windows 动画设置；可随时关闭。" Style="{StaticResource Secondary}"/>
 <TextBlock Text="模块顺序与显示" FontWeight="SemiBold" Margin="0,20,0,8"/>

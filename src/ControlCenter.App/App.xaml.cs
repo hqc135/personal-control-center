@@ -53,7 +53,7 @@ public partial class App : Application
             shutdownLog = new(directory);
             var loaded = await repository.LoadAsync(); config = loaded.Config; readOnly = loaded.ReadOnly;
             trust = new ShortcutTrustStore(directory); await trust.LoadAsync();
-            ThemeManager.Apply(config.Appearance.Theme);
+            ThemeManager.Apply(config.Appearance);
             audio = new CoreAudioService(); power = new PowerSchemeService();
             coordinator = new ControlCoordinator(audio, power);
             var launcher = new ShortcutLauncher(trust, new WindowsLaunchPlatform());
@@ -151,7 +151,7 @@ public partial class App : Application
             if (exiting) return;
             if (settings?.Saved is { } saved)
             {
-                config = saved; ThemeManager.Apply(config.Appearance.Theme);
+                config = saved; ThemeManager.Apply(config.Appearance);
                 panel.MotionEnabled = config.Appearance.Motion != "off"; panel.Model.UpdateConfig(config);
                 ApplyHotkey();
                 if (settings?.SavedWarning is { } warning) panel.Model.Notice = warning;
@@ -169,8 +169,8 @@ public partial class App : Application
             : (result.Message ?? "快捷键注册未确认。") + " 当前：" + (hotkeys.Current?.Label ?? "未注册");
         if (result.Outcome != CommandOutcome.Confirmed && panel is not null) panel.Model.Notice = hotkeyStatus;
     }
-    private void PreferenceChanged(object sender, UserPreferenceChangedEventArgs e) => Dispatcher.BeginInvoke(() => ThemeManager.Apply(config.Appearance.Theme));
-    private void SystemSettingChanged(object? sender, PropertyChangedEventArgs e) => Dispatcher.BeginInvoke(() => ThemeManager.Apply(config.Appearance.Theme));
+    private void PreferenceChanged(object sender, UserPreferenceChangedEventArgs e) => Dispatcher.BeginInvoke(() => ThemeManager.Apply(config.Appearance));
+    private void SystemSettingChanged(object? sender, PropertyChangedEventArgs e) => Dispatcher.BeginInvoke(() => ThemeManager.Apply(config.Appearance));
     private void DisplaySettingsChanged(object? sender, EventArgs e)
     {
         if (!Dispatcher.HasShutdownStarted) Dispatcher.BeginInvoke(() => { if (!exiting && panel?.IsVisible == true) panel.RefreshPlacement(); });
@@ -204,4 +204,3 @@ public partial class App : Application
         base.OnExit(e);
     }
 }
-

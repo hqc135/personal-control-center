@@ -1,12 +1,12 @@
 # 使用说明
 
-适用版本：0.7.1 候选。Windows 11 x64，内部版本 22621 或更高；self-contained 免安装 ZIP 已包含 .NET 10 Windows Desktop Runtime x64，普通使用无需另外安装 .NET 或 SDK。
+适用版本：0.8.0 候选。Windows 11 x64，内部版本 22621 或更高；self-contained 免安装 ZIP 已包含 .NET 10 Windows Desktop Runtime x64，普通使用无需另外安装 .NET 或 SDK。
 
 主面板中的电源与保持唤醒卡在宽窗口并排，在窄窗口自动上下排列。点“方案与设置”“时长与选项”“连接详情与测试”可展开详细操作；展开后可滚动浏览。拖动顶部移动窗口，拖动边缘调整大小。声音卡上的“设备”展开输出设备信息。
 
 ## 获取与启动
 
-本地候选为 PersonalControlCenter-0.7.1-win-x64.zip；GitHub 已发布包见 [Release](https://github.com/hqc135/personal-control-center/releases)，尚未发布的本地候选不一定在那里。私有仓库需登录有权限的 GitHub 账号。不要下载 Source code，那是开发源码。下载后：
+本地候选为 PersonalControlCenter-0.8.0-win-x64.zip；GitHub 已发布包见 [Release](https://github.com/hqc135/personal-control-center/releases)，尚未发布的本地候选不一定在那里。私有仓库需登录有权限的 GitHub 账号。不要下载 Source code，那是开发源码。下载后：
 
 1. 将整个 ZIP 解压到固定目录，保留所有 DLL、runtimeconfig.json 和 Assets，不能只复制 EXE。
 2. 双击 PersonalControlCenter.exe，默认显示面板；无需管理员权限。
@@ -81,4 +81,8 @@
 
 ## 当前验收边界
 
-181 项非交互测试及假数据功能流程通过。已完成此机只读状态、面板刷新和退出验收。真实写入控制、线上下载、性能、多屏/DPI、读屏及完整高对比度矩阵仍未验收。当前为自用候选。详见 [0.7.1 验收](acceptance/0.7.1.md)。
+197 项非交互测试及假数据功能流程通过。已完成此机只读状态、面板刷新和退出验收。真实写入控制、线上下载、性能、多屏/DPI、读屏及完整高对比度矩阵仍未验收。当前为自用候选。详见 [0.8.0 验收](acceptance/0.8.0.md)。
+
+
+## 配色与 CSS
+设置 → 外观支持六套配色、浅深色及跟随系统。展开自定义 CSS 可编辑和导入导出；预览只影响设置窗口，保存后全局生效。详见 [主题说明](THEMES.md)。

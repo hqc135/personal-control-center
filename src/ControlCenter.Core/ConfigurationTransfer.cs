@@ -8,7 +8,7 @@ public static class ConfigurationTransfer
         ConfigCodec.Validate(source);
         return new()
         {
-            Appearance = new(source.Appearance.Theme, source.Appearance.FontFamily, source.Appearance.Motion, source.Appearance.Material),
+            Appearance = new(source.Appearance.Theme, source.Appearance.FontFamily, source.Appearance.Motion, source.Appearance.Material, source.Appearance.Palette, source.Appearance.CustomCss),
             Modules = [.. source.Modules],
             Proxy = new(source.Proxy.Host, source.Proxy.Port),
             Shortcuts = source.Shortcuts.Where(x => x.Kind == "knownFolder").Select(x => new ShortcutDefinition(x.Id, x.Label, x.Kind, x.Target)).ToArray(),

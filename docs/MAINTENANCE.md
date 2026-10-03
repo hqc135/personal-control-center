@@ -39,7 +39,7 @@ $env:DOTNET_GENERATE_ASPNET_CERTIFICATE = 'false'
 1. `git pull --ff-only` 后创建 `codex/简短任务名` 分支。
 2. 改动前读 ARCHITECTURE.md、DECISIONS.md 和相关验收记录；系统调用保留在 Windows 层，业务逻辑经接口可替换。
 3. 对状态竞态、文件冲突、取消、超时和退出错误路径补有意义的测试；UI 小修不必堆叠镜像测试。
-4. 运行 `./scripts/build.ps1 -Offline`，检查 `git diff --check` 与差异；当前基线 181 项测试。
+4. 运行 `./scripts/build.ps1 -Offline`，检查 `git diff --check` 与差异；当前基线 197 项测试。
 5. 提交并推送分支，审查后合入 main；不强推覆盖他人提交，不上传本机依赖/产物。
 
 重要约束：音量写入针对捕获的设备；隐藏面板停止相应轮询；外部代理请求必须由用户主动触发；唤醒请求由所属线程释放；配置冲突拒绝静默覆盖；普通配置保存不自动开启自启。共享文件锁不能防止不合作的外部编辑器在最终比较与替换间竞争。
@@ -67,15 +67,15 @@ $env:DOTNET_GENERATE_ASPNET_CERTIFICATE = 'false'
 ./scripts/verify-package.ps1
 ```
 
-现有脚本使用 B6 路径；当前版本 0.7.1。新增迭代时同步修改 App csproj、package.ps1 的版本、各脚本产物/证据目录与当前文档。不要批量替换历史验收记录。
+现有脚本使用 B6 路径；当前版本 0.8.0。新增迭代时同步修改 App csproj、package.ps1 的版本、各脚本产物/证据目录与当前文档。不要批量替换历史验收记录。
 
 构建收据、包内 RELEASE.json 与源码包 SOURCE_COMMIT.txt 必须指向同一干净提交。依赖清单是本地许可元数据盘点，不等同在线漏洞审计。ZIP 时间戳不同，不承诺压缩包字节级复现；B5 曾完成同目录二次二进制比较，不能外推为后续每版验证。
 
-GitHub Release 默认交付 self-contained win-x64，运行时来自官方 NuGet 包并核对 SHA512；准备好运行时后构建时加 -SelfContained，打包与校验时加 -Mode self-contained。framework-dependent 保留为开发选项。详情见 RELEASE_GUIDE.md。普通提交不把 ZIP 放进 Git；如需发布下载包，单独创建候选 Release，附运行包、SHA256 和验收边界，并回读验证附件。当前发布标签 v0.7.1，应用附件名 PersonalControlCenter-0.7.1-win-x64.zip，采用预发布状态。Release 应先以 draft 上传并校验附件，再发布；首页链接须匹配实际附件名。
+GitHub Release 默认交付 self-contained win-x64，运行时来自官方 NuGet 包并核对 SHA512；准备好运行时后构建时加 -SelfContained，打包与校验时加 -Mode self-contained。framework-dependent 保留为开发选项。详情见 RELEASE_GUIDE.md。普通提交不把 ZIP 放进 Git；如需发布下载包，单独创建候选 Release，附运行包、SHA256 和验收边界，并回读验证附件。当前发布标签 v0.8.0，应用附件名 PersonalControlCenter-0.8.0-win-x64.zip，采用预发布状态。Release 应先以 draft 上传并校验附件，再发布；首页链接须匹配实际附件名。
 
 ## 故障与回退
 
-0.7.1 为本地候选，尚未发布为 GitHub Release；上文 v0.7.1 是准备发布时的标签与附件命名，不表示附件已经上传。新增能力见 FEATURE_ROADMAP.md。Windows 目标框架为 net10.0-windows10.0.22621.0，WindowsSdkPackageVersion 固定 10.0.22621.57；离线构建需要先还原该投影包。功能偏好存于 features.json，独立于旧 config.json；更新包并排存于 versions，不自动替换运行程序。
+0.8.0 为本地候选，尚未发布为 GitHub Release；上文 v0.8.0 是准备发布时的标签与附件命名，不表示附件已经上传。新增能力见 FEATURE_ROADMAP.md。Windows 目标框架为 net10.0-windows10.0.22621.0，WindowsSdkPackageVersion 固定 10.0.22621.57；离线构建需要先还原该投影包。功能偏好存于 features.json，独立于旧 config.json；更新包并排存于 versions，不自动替换运行程序。
 
 先记录包版本/提交、复现步骤、Windows build、相关日志及最后确认状态；不要为排查默认重置代理、电源、自启或重启 Explorer。运行数据位置及备份恢复见 USER_GUIDE.md。日志含退出关联 ID、耗时和结果，不能把这些字段当作所有操作的完整审计。
 
@@ -84,3 +84,6 @@ GitHub Release 默认交付 self-contained win-x64，运行时来自官方 NuGet
 ## 持续验收清单
 
 每次候选记录：源码提交、SDK、构建/测试退出码、测试数、包 SHA256、模式、已测与未测场景。仍待完成的发布门包括真实系统集成、实际 CPU/内存/句柄、DPI/多屏、休眠恢复、可访问性、在线漏洞审计、项目许可证与签名。不要用假接口测试替代这些结论。
+
+
+主题实现与新增变量流程见 [THEMES.md](THEMES.md)。AppearanceStyles 位于 Core，ThemeManager 使用 WPF DynamicResource；保持变量白名单与文件大小限制。UI 工具支持 --allow-ui-themes 输出目录，只使用假服务。

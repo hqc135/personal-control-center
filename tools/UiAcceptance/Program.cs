@@ -9,7 +9,7 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
-        if (args.Length is < 1 or > 2 || args[0] != "--allow-ui")
+        if (args.Length is < 1 or > 2 || args[0] is not ("--allow-ui" or "--allow-ui-themes"))
         { Console.Error.WriteLine("This tool opens a window. Run only with explicit UI-test authorization and --allow-ui."); return 2; }
         var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("pack://application:,,,/PersonalControlCenter;component/Themes/Controls.xaml") });
@@ -40,6 +40,7 @@ internal static class Program
                 try
                 {
                     Directory.CreateDirectory(args[1]);
+                    if (args[0] == "--allow-ui-themes") { await CheckThemes(panel, config, args[1]); return; }
                     await Task.Delay(700);
                     panel.MotionEnabled = false;
                     var handle = new System.Windows.Interop.WindowInteropHelper(panel).Handle;
@@ -164,6 +165,56 @@ internal static class Program
         coordinator.DisposeAsync().AsTask().GetAwaiter().GetResult();
         return Environment.ExitCode;
     }
+    private static async Task CheckThemes(ControlPanel panel, AppConfig config, string output)
+    {
+        await Task.Delay(300); panel.MotionEnabled = false;
+        foreach (var palette in AppearanceStyles.Palettes)
+            foreach (string mode in new[] { "light", "dark" })
+            {
+                var appearance = new AppearanceConfig(Theme: mode, Palette: palette.Id);
+                ControlCenter.App.ThemeManager.Apply(appearance); panel.UpdateLayout();
+                var expected = AppearanceStyles.Resolve(appearance, mode == "dark")["background"];
+                if (!SystemParameters.HighContrast && ((System.Windows.Media.SolidColorBrush)panel.Background).Color.ToString() != "#FF" + expected[1..]) throw new Exception("Panel palette did not update");
+                Capture(panel, Path.Combine(output, palette.Id + "-" + mode + ".png"));
+            }
+        ControlCenter.App.ThemeManager.Apply(config.Appearance);
+        var baseline = Application.Current.Resources["AccentBrush"];
+        var repo = new MemoryConfig(config);
+        var settings = new SettingsWindow(repo, config, false, new MemoryTrust());
+        settings.Show(); await Task.Delay(150);
+        ((System.Windows.Controls.ComboBox)settings.FindName("PalettePicker")).SelectedValue = "mint";
+        ((System.Windows.Controls.RadioButton)settings.FindName("LightTheme")).IsChecked = true;
+        var editor = (System.Windows.Controls.TextBox)settings.FindName("CssEditor");
+        editor.Text = ":root { --accent: #7356BF; --card-radius: 24px; --card-padding: 20px; --control-radius: 12px; }";
+        void Click(string label) => Descendants(settings).OfType<System.Windows.Controls.Button>().Single(b => Equals(b.Content, label)).RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Button.ClickEvent));
+        Click("预览配色"); settings.UpdateLayout();
+        if (!ReferenceEquals(baseline, Application.Current.Resources["AccentBrush"])) throw new Exception("Preview leaked into application resources");
+        if (((CornerRadius)settings.Resources["CardRadius"]).TopLeft != 24) throw new Exception("CSS radius not applied");
+        var valid = settings.Resources["AccentBrush"];
+        var css = editor.Text; editor.Text = ":root { --accent: invalid; }"; Click("预览配色");
+        if (!ReferenceEquals(valid, settings.Resources["AccentBrush"])) throw new Exception("Invalid CSS changed preview");
+        editor.Text = css; Click("预览配色");
+        Descendants(settings).OfType<System.Windows.Controls.Expander>().Single(e => Equals(e.Header, "自定义 CSS 主题")).IsExpanded = true;
+        settings.UpdateLayout(); Capture(settings, Path.Combine(output, "custom-css-settings.png"));
+        settings.Width = 440; settings.Height = 420; settings.UpdateLayout();
+        var save = (System.Windows.Controls.Button)settings.FindName("SaveButton");
+        var position = save.TranslatePoint(new Point(), settings);
+        if (position.Y < 0 || position.Y + save.ActualHeight > settings.ActualHeight) throw new Exception("Save footer clipped");
+        Capture(settings, Path.Combine(output, "custom-css-small.png"));
+        save.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Button.ClickEvent));
+        for (int i = 0; i < 40 && settings.Saved is null; i++) await Task.Delay(50);
+        if (settings.Saved?.Appearance.CustomCss != css) throw new Exception("Theme did not save");
+        var loaded = (await repo.LoadAsync()).Config;
+        ControlCenter.App.ThemeManager.Apply(loaded.Appearance); panel.UpdateLayout();
+        var tile = (System.Windows.Controls.Border)panel.FindName("BrightnessCard");
+        if (tile.CornerRadius.TopLeft != 24 || tile.Padding.Left != 20) throw new Exception("Saved CSS geometry did not reach panel");
+        Capture(panel, Path.Combine(output, "custom-css-panel.png"));
+        var reopened = new SettingsWindow(repo, loaded, false, new MemoryTrust());
+        reopened.Show(); await Task.Delay(100);
+        if (((System.Windows.Controls.TextBox)reopened.FindName("CssEditor")).Text != css || !Equals(((System.Windows.Controls.ComboBox)reopened.FindName("PalettePicker")).SelectedValue, "mint")) throw new Exception("Theme draft did not reload");
+        reopened.PrepareForExit(); reopened.Close();
+        File.WriteAllText(Path.Combine(output, "result.txt"), "PASS: six palettes in light/dark, scoped CSS preview, invalid CSS rollback, CSS geometry, saved theme reload and small settings footer. Fake services only.");
+    }
     [System.Runtime.InteropServices.DllImport("user32.dll")]
     private static extern nint SendMessage(nint hwnd, int message, nint wParam, nint lParam);
     private static long HitTest(nint hwnd, Point point) => SendMessage(hwnd, 0x0084, 0, (nint)((((int)point.Y & 0xffff) << 16) | ((int)point.X & 0xffff))).ToInt64();
@@ -248,4 +299,3 @@ internal static class Program
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 }
-

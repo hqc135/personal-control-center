@@ -2,7 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 namespace ControlCenter.Core;
 
-public sealed record AppearanceConfig(string Theme = "system", string FontFamily = "PingFang SC", string Motion = "subtle", string Material = "solid")
+public sealed record AppearanceConfig(string Theme = "system", string FontFamily = "PingFang SC", string Motion = "subtle", string Material = "solid", string Palette = "graphite", string CustomCss = "")
 {
     [JsonExtensionData] public Dictionary<string, JsonElement>? Additional { get; init; }
 }
@@ -36,6 +36,7 @@ public static class ConfigCodec
         if (config.Appearance is null || config.Appearance.Theme is not ("system" or "light" or "dark")
             || config.Appearance.Motion is not ("subtle" or "off") || config.Appearance.Material != "solid")
             throw new InvalidDataException("外观配置无效。");
+        _ = AppearanceStyles.Resolve(config.Appearance, false);
         string[] allowed = ["audio", "power", "awake", "proxy", "shortcuts"];
         if (config.Modules is null || config.Modules.Distinct().Count() != config.Modules.Length || config.Modules.Any(x => !allowed.Contains(x)))
             throw new InvalidDataException("模块列表无效。");
@@ -71,4 +72,3 @@ public interface IConfigRecovery
     Task<IReadOnlyList<ConfigBackup>> ListBackupsAsync(CancellationToken ct = default);
     Task<AppConfig> ReadBackupAsync(string id, CancellationToken ct = default);
 }
-
