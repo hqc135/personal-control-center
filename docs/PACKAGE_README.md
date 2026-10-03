@@ -1,4 +1,4 @@
-# 个人控制中心 0.7.0
+# 个人控制中心 0.7.1
 
 完整解压 ZIP，双击 PersonalControlCenter.exe 即可使用。Windows 11 x64，内部版本 22621 或更高。发布的 win-x64 ZIP 已包含 .NET 10 桌面运行时，不需要安装器或管理员权限。不要只复制 EXE。
 

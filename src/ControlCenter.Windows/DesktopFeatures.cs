@@ -27,11 +27,18 @@ public sealed class DesktopFeatures(CoreAudioService audio) : IDesktopFeatures
             }
             else errors.Add("电池读取失败");
             try { mic = await audio.ReadMicrophoneAsync(ct); } catch { errors.Add("麦克风读取失败"); }
-            try { displays = await brightness.ReadAsync(ct); } catch { errors.Add("亮度接口不可用，可打开显示设置"); }
+            try { displays = await brightness.ReadAsync(ct); } catch (ServiceException ex) { errors.Add(ex.Message); } catch { errors.Add("亮度接口不可用，可打开显示设置"); }
             try
             {
-                network = string.Join(" · ", NetworkInterface.GetAllNetworkInterfaces().Where(x => x.OperationalStatus == OperationalStatus.Up && x.NetworkInterfaceType != NetworkInterfaceType.Loopback)
-                    .Select(x => x.Name));
+                var links = NetworkInterface.GetAllNetworkInterfaces()
+                    .Where(x => x.OperationalStatus == OperationalStatus.Up && x.NetworkInterfaceType != NetworkInterfaceType.Loopback)
+                    .Select(x => new { x.Name, IP = x.GetIPProperties() })
+                    .Where(x => x.IP.UnicastAddresses.Any(a => !System.Net.IPAddress.IsLoopback(a.Address)))
+                    .ToArray();
+                var routed = links.Where(x => x.IP.GatewayAddresses.Any(g => !g.Address.Equals(System.Net.IPAddress.Any) && !g.Address.Equals(System.Net.IPAddress.IPv6Any))).ToArray();
+                var shown = (routed.Length > 0 ? routed : links).Take(2).ToArray();
+                network = string.Join(" · ", shown.Select(x => x.Name));
+                if (links.Length > shown.Length) network += $"（另有 {links.Length - shown.Length} 个本地连接）";
                 if (network.Length == 0) network = "未连接";
                 else network += " · 链路已连接（不代表互联网可用）";
             }

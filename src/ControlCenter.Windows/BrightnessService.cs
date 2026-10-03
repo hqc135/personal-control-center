@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Runtime.InteropServices;
 using ControlCenter.Core;
 namespace ControlCenter.Windows;
@@ -12,10 +11,11 @@ public sealed class BrightnessService : IAsyncDisposable
         {
             QueryWmi("WmiMonitorBrightness", item =>
             {
-                if ((bool)item.Active) result.Add(new("wmi:" + (string)item.InstanceName, "内置显示屏", (byte)item.CurrentBrightness));
+                if ((bool)ReadProperty(item, "Active")) result.Add(new("wmi:" + (string)ReadProperty(item, "InstanceName"), "内置显示屏", (byte)ReadProperty(item, "CurrentBrightness")));
             });
         }
-        catch (COMException) { }
+        catch (COMException ex) when (ex.HResult == unchecked((int)0x80041010)) { } // No WMI brightness class on this hardware.
+        catch (COMException ex) { throw new ServiceException(FailureCode.NativeFailure, $"内屏亮度读取失败（{ex.HResult:X8}），可使用显示设置。", ex.HResult); }
         EnumeratePhysical((id, name, handle) =>
         {
             ct.ThrowIfCancellationRequested();
@@ -32,7 +32,7 @@ public sealed class BrightnessService : IAsyncDisposable
         {
             QueryWmi("WmiMonitorBrightnessMethods", item =>
             {
-                if ("wmi:" + (string)item.InstanceName != id) return;
+                if ("wmi:" + (string)ReadProperty(item, "InstanceName") != id) return;
                 ct.ThrowIfCancellationRequested();
                 uint code = item.WmiSetBrightness(0u, (byte)percent);
                 if (code != 0) throw new IOException("屏幕拒绝亮度设置。");
@@ -41,7 +41,7 @@ public sealed class BrightnessService : IAsyncDisposable
             bool verified = false;
             QueryWmi("WmiMonitorBrightness", item =>
             {
-                if ("wmi:" + (string)item.InstanceName == id) verified = Math.Abs((byte)item.CurrentBrightness - percent) <= 2;
+                if ("wmi:" + (string)ReadProperty(item, "InstanceName") == id) verified = Math.Abs((byte)ReadProperty(item, "CurrentBrightness") - percent) <= 2;
             });
             if (changed && !verified) throw new IOException("亮度写入后尚未读回目标值，请刷新确认。");
         }
@@ -62,18 +62,46 @@ public sealed class BrightnessService : IAsyncDisposable
         if (!changed) throw new ServiceException(FailureCode.DeviceGone, "原显示屏不可用，请刷新。");
         return true;
     }, ct);
+    // Use the named property collection: dynamic WMI members failed on later instances
+    // during real-machine refresh, although the first instance was readable.
+    private static object ReadProperty(dynamic item, string name)
+    {
+        object? properties = null, property = null;
+        try
+        {
+            properties = item.Properties_;
+            property = ((dynamic)properties).Item(name);
+            return ((dynamic)property).Value;
+        }
+        finally { Release(property); Release(properties); }
+    }
     private static void QueryWmi(string className, Action<dynamic> action)
     {
-        object? locator = null, service = null, collection = null;
+        object? locator = null, service = null, security = null, collection = null;
+        string phase = "创建连接";
         try
         {
             locator = Activator.CreateInstance(Type.GetTypeFromProgID("WbemScripting.SWbemLocator", true)!);
+            phase = "连接命名空间";
             service = ((dynamic)locator!).ConnectServer(".", "root\\wmi");
+            phase = "设置连接上下文";
+            security = ((dynamic)service).Security_;
+            ((dynamic)security).ImpersonationLevel = 3;
+            phase = "执行查询";
             collection = ((dynamic)service).ExecQuery("SELECT * FROM " + className);
-            foreach (object item in (IEnumerable)collection)
-            { try { action(item); } finally { Release(item); } }
+            phase = "读取数量";
+            int count = ((dynamic)collection).Count;
+            for (int i = 0; i < count; i++)
+            {
+                phase = "获取对象";
+                object item = ((dynamic)collection).ItemIndex(i);
+                try { phase = "读取属性"; action(item); }
+                finally { Release(item); }
+            }
         }
-        finally { Release(collection); Release(service); Release(locator); }
+        catch (COMException ex) when (ex.HResult != unchecked((int)0x80041010))
+        { throw new ServiceException(FailureCode.NativeFailure, $"内屏亮度{phase}失败（{ex.HResult:X8}）。", ex.HResult); }
+        finally { Release(collection); Release(security); Release(service); Release(locator); }
     }
     private static void Release(object? value) { if (value is not null && Marshal.IsComObject(value)) Marshal.ReleaseComObject(value); }
     private static void EnumeratePhysical(Action<string, string, nint> action)

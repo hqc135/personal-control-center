@@ -245,6 +245,14 @@ public partial class ControlPanel : Window
         if (!exiting) { e.Cancel = true; if (CanHide) Dismiss(); else ExitRequested?.Invoke(); }
         base.OnClosing(e);
     }
-    public void Exit() { exiting = true; Model.Desktop.PropertyChanged -= DesktopChanged; Model.PropertyChanged -= ModelChanged; Model.SetVisible(false); Model.Dispose(); HwndSource.FromHwnd(new WindowInteropHelper(this).Handle)?.RemoveHook(WindowMessage); Close(); }
+    public void Exit()
+    {
+        if (exiting) return;
+        exiting = true;
+        Model.Desktop.PropertyChanged -= DesktopChanged; Model.PropertyChanged -= ModelChanged;
+        Model.SetVisible(false); Model.Dispose();
+        var handle = new WindowInteropHelper(this).Handle;
+        if (handle != 0) HwndSource.FromHwnd(handle)?.RemoveHook(WindowMessage);
+        if (IsLoaded) Close();
+    }
 }
-

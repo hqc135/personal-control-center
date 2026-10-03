@@ -2,7 +2,7 @@
 
 一个放在 Windows 托盘里的轻量控制面板，集中管理音量、电源方案、临时保持唤醒、代理检测和常用入口。
 
-0.7.0 候选已接入完整扩展功能。首页只放收藏，“全部功能”提供媒体、麦克风、亮度、连接状态、场景与更新；窄窗口自动单列。顶栏可固定面板，窗口位置与大小跨重启保存。
+0.7.1 候选已接入完整扩展功能。首页只放收藏，“全部功能”提供媒体、麦克风、亮度、连接状态、场景与更新；窄窗口自动单列。顶栏可固定面板，窗口位置与大小跨重启保存。
 
 ![深色控制中心，截图使用演示数据](docs/images/control-center-dark.png)
 
@@ -10,7 +10,7 @@
 
 ## 下载与使用
 
-**0.7.0 本地候选包：`artifacts/PersonalControlCenter-0.7.0-win-x64.zip`**。GitHub 尚未发布此候选；[查看已发布版本](https://github.com/hqc135/personal-control-center/releases)，旧版本不含本轮新增功能。
+**0.7.1 本地候选包：`artifacts/PersonalControlCenter-0.7.1-win-x64.zip`**。GitHub 尚未发布此候选；[查看已发布版本](https://github.com/hqc135/personal-control-center/releases)，旧版本不含本轮新增功能。
 
 1. 下载 ZIP，完整解压到你想放置的目录。
 2. 双击 `PersonalControlCenter.exe`，即可使用。
@@ -49,4 +49,4 @@
 - [维护说明](docs/MAINTENANCE.md)：源码结构、开发环境、构建测试和发布流程。
 - [验收记录](docs/acceptance/UI-2026-10-02.md) · [发布检查](docs/RELEASE_CHECKLIST.md)
 
-当前源码与本地候选 **0.7.0**。181 项自动测试和假数据界面验收通过；真实硬件控制、性能、多屏/DPI 等完整矩阵仍待验收。程序未签名，当前用于个人试用。见 [本轮验收](docs/acceptance/0.7.0.md)。
+当前源码与本地候选 **0.7.1**。181 项自动测试和假数据界面验收通过；已完成此机只读探测、面板刷新和退出验收，并修复重复亮度读取与退出异常。真实写入控制、性能、多屏/DPI 等完整矩阵仍待验收。程序未签名，当前用于个人试用。见 [本轮验收](docs/acceptance/0.7.1.md)。
