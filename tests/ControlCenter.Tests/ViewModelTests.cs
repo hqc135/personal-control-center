@@ -50,14 +50,16 @@ public class ViewModelTests
     {
         var active = Guid.NewGuid(); var other = Guid.NewGuid();
         var power = new FakePower { Snapshot = new([new(active, "Balanced")], active, true) };
-        await using var coordinator = new ControlCoordinator(new FakeAudio(), power, TimeSpan.Zero);
+        var audio = new FakeAudio { Snapshot = new([new("a", "Speaker")], "a", null, new("a", .6f, false)) };
+        await using var coordinator = new ControlCoordinator(audio, power, TimeSpan.Zero);
         using var model = new PanelViewModel(coordinator, new ShortcutLauncher(new FakeTrust(), new FakePlatform()), new(), action => action());
         await coordinator.RefreshAsync();
-        var changes = new HashSet<string?>(); model.PropertyChanged += (_, e) => changes.Add(e.PropertyName);
+        var changes = new System.Collections.Concurrent.ConcurrentBag<string?>(); model.PropertyChanged += (_, e) => changes.Add(e.PropertyName);
         Assert.Contains("仅提供一个", model.PowerHint); Assert.False(model.HasMultiplePowerSchemes); Assert.False(model.HasMultipleOutputs);
         Assert.False(model.SelectPower.CanExecute(active)); Assert.False(model.SelectPower.CanExecute(other));
+        audio.Snapshot = audio.Snapshot with { Devices = [new("a", "Speaker"), new("b", "Headset")] };
         power.Snapshot = new([new(active, "Balanced"), new(other, "Custom")], active, true);
         await coordinator.RefreshAsync();
-        Assert.Contains(nameof(model.HasMultiplePowerSchemes), changes); Assert.Contains(nameof(model.HasMultipleOutputs), changes); Assert.True(model.HasMultiplePowerSchemes); Assert.True(model.SelectPower.CanExecute(other)); Assert.False(model.SelectPower.CanExecute(active));
+        Assert.Contains(nameof(model.HasMultiplePowerSchemes), changes); Assert.Contains(nameof(model.HasMultipleOutputs), changes); Assert.True(model.HasMultipleOutputs); Assert.True(model.HasMultiplePowerSchemes); Assert.True(model.SelectPower.CanExecute(other)); Assert.False(model.SelectPower.CanExecute(active));
     }
 }
