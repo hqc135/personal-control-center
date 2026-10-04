@@ -12,7 +12,7 @@ public sealed class UpdatePackages(string directory)
     private static HttpClient Client(string? token)
     {
         var client = new HttpClient { Timeout = TimeSpan.FromMinutes(15) };
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("PersonalControlCenter/0.7.0");
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("PersonalControlCenter/0.9.0");
         if (!string.IsNullOrWhiteSpace(token)) client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token.Trim());
         return client;
     }

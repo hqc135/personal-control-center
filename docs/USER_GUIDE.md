@@ -1,12 +1,12 @@
 # 使用说明
 
-适用版本：0.8.1 候选。Windows 11 x64，内部版本 22621 或更高；self-contained 免安装 ZIP 已包含 .NET 10 Windows Desktop Runtime x64，普通使用无需另外安装 .NET 或 SDK。
+适用版本：0.9.0 候选。Windows 11 x64，内部版本 22621 或更高；self-contained 免安装 ZIP 已包含 .NET 10 Windows Desktop Runtime x64，普通使用无需另外安装 .NET 或 SDK。
 
 主面板中的电源与保持唤醒卡在宽窗口并排，在窄窗口自动上下排列。点“方案与设置”“时长与选项”“连接详情与测试”可展开详细操作；展开后可滚动浏览。拖动顶部移动窗口，拖动边缘调整大小。声音卡上的“设备”展开输出设备信息。
 
 ## 获取与启动
 
-本地候选为 PersonalControlCenter-0.8.1-win-x64.zip；GitHub 已发布包见 [Release](https://github.com/hqc135/personal-control-center/releases)，尚未发布的本地候选不一定在那里。私有仓库需登录有权限的 GitHub 账号。不要下载 Source code，那是开发源码。下载后：
+[下载 0.9.0 ZIP](https://github.com/hqc135/personal-control-center/releases/download/v0.9.0/PersonalControlCenter-0.9.0-win-x64.zip)，校验文件在 [Release](https://github.com/hqc135/personal-control-center/releases/tag/v0.9.0)。私有仓库需登录有权限的 GitHub 账号。不要下载 Source code，那是开发源码。下载后：
 
 1. 将整个 ZIP 解压到固定目录，保留所有 DLL、runtimeconfig.json 和 Assets，不能只复制 EXE。
 2. 双击 PersonalControlCenter.exe，默认显示面板；无需管理员权限。
@@ -64,7 +64,12 @@
 
 ## 更新与卸载
 
-更新前从托盘退出，并另存一份整个运行数据目录。将新版本完整解压到安装目录；尽量保持程序路径不变。若移动目录，先在原程序关闭自启，再在新位置按需启用。回退程序不等于回退配置或 Windows 系统状态，不要强行覆盖较新 schema。
+1. 从托盘退出旧版，备份 `%LOCALAPPDATA%/PersonalControlCenter` 整个目录（排除体积较大的 versions 子目录亦可）。主题在 config.json，收藏/场景/窗口位置在 features.json。
+2. 完整解压新 ZIP 到独立目录，例如 PersonalControlCenter-0.9.0。运行新目录中的 EXE。新版继续读取同一个用户配置目录，无需重新配置主题和收藏。
+3. “全部功能 → 更新与回退”也支持用发布 SHA256 校验 ZIP 并并排解压。它不会自动启动新版、替换旧程序或改用户配置。
+4. 需要回退时，退出新版后运行上一个已验证版本（推荐 0.8.1）的 EXE。如果也要恢复升级前的配置，保持应用退出，先另存当前用户配置，再恢复之前的备份。回退程序不等于恢复 Windows 音量等系统状态。
+
+若原位置已启用自启，在移动前先用原版关闭自启，再按需为新版启用。不要同时运行两版；新版沿用单实例机制。较老版本不认识新主题字段时不会提供完整编辑能力，回退前保留配置备份。
 
 卸载：先关闭本程序自启，再退出并删除解压目录。运行数据独立保留；确认不再需要后可自行删除上述数据目录。不要删除系统 .NET 运行时来卸载本程序。
 
@@ -81,7 +86,7 @@
 
 ## 当前验收边界
 
-199 项非交互测试及假数据功能流程通过。已完成此机只读状态、面板刷新和退出验收。真实写入控制、线上下载、性能、多屏/DPI、读屏及完整高对比度矩阵仍未验收。当前为自用候选。详见 [0.8.1 验收](acceptance/0.8.1.md)。
+199 项非交互测试及假数据功能流程通过。已完成此机只读状态、面板刷新和退出验收。真实写入控制、线上下载、性能、多屏/DPI、读屏及完整高对比度矩阵仍未验收。当前为自用候选。详见 [0.9.0 验收](acceptance/0.9.0.md)。
 
 
 ## 配色与 CSS

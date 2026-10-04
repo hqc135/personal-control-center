@@ -53,10 +53,11 @@ public class ViewModelTests
         await using var coordinator = new ControlCoordinator(new FakeAudio(), power, TimeSpan.Zero);
         using var model = new PanelViewModel(coordinator, new ShortcutLauncher(new FakeTrust(), new FakePlatform()), new(), action => action());
         await coordinator.RefreshAsync();
-        Assert.Contains("仅提供一个", model.PowerHint);
+        var changes = new HashSet<string?>(); model.PropertyChanged += (_, e) => changes.Add(e.PropertyName);
+        Assert.Contains("仅提供一个", model.PowerHint); Assert.False(model.HasMultiplePowerSchemes); Assert.False(model.HasMultipleOutputs);
         Assert.False(model.SelectPower.CanExecute(active)); Assert.False(model.SelectPower.CanExecute(other));
         power.Snapshot = new([new(active, "Balanced"), new(other, "Custom")], active, true);
         await coordinator.RefreshAsync();
-        Assert.True(model.SelectPower.CanExecute(other)); Assert.False(model.SelectPower.CanExecute(active));
+        Assert.Contains(nameof(model.HasMultiplePowerSchemes), changes); Assert.Contains(nameof(model.HasMultipleOutputs), changes); Assert.True(model.HasMultiplePowerSchemes); Assert.True(model.SelectPower.CanExecute(other)); Assert.False(model.SelectPower.CanExecute(active));
     }
 }

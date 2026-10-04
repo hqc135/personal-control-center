@@ -18,6 +18,14 @@ public sealed class DesktopViewModel : INotifyPropertyChanged, IDisposable
     public string Status { get; private set; } = "打开全部功能或刷新以读取设备状态";
     public string Battery => Snapshot?.Battery ?? "";
     public string Connections => Snapshot is { } s ? s.Network + "\n蓝牙：" + s.Bluetooth : "尚未读取";
+    public string MicrophoneName => Snapshot?.Microphone?.Name ?? "未发现可访问的麦克风";
+    public string MicrophoneSummary => Snapshot is null ? "尚未读取" : Snapshot.Microphone is null ? "不可用" : Snapshot.Microphone.Muted ? "已静音" : "未静音";
+    public string NetworkSummary => Snapshot?.Network.Split(" · 链路")[0] ?? "尚未读取";
+    public string BluetoothSummary => Snapshot?.Bluetooth ?? "尚未读取";
+    public string BrightnessHint => Snapshot is null ? "尚未读取屏幕能力，请刷新。"
+        : Displays.Length > 0 ? "调整后点应用；百分比为待应用值。"
+        : Snapshot.Warnings.Any(x => x.Contains("亮度")) ? "亮度读取失败，可刷新重试或打开显示设置。"
+        : "未发现支持 WMI / DDC 的可控屏幕，可打开显示设置。";
     public string Microphone => Snapshot?.Microphone is { } m ? m.Name + (m.Muted ? " · 已静音" : " · 未静音") : "未发现可访问的麦克风";
     public string MicrophoneAction => Snapshot?.Microphone?.Muted == true ? "取消麦克风静音" : "麦克风静音";
     public DisplayBrightness[] Displays => Snapshot?.Displays ?? [];

@@ -53,6 +53,9 @@ public sealed class PanelViewModel : INotifyPropertyChanged, IDisposable
     public bool AudioAvailable => coordinator.Audio.Current.Value?.Level is not null && !(coordinator.Audio.Current.IsStale && coordinator.Audio.Current.Error is not null);
     public string AudioStatus => Status(coordinator.Audio.Current);
     public string ActivePowerName => coordinator.Power.Current.Value is { } power ? power.Schemes.FirstOrDefault(x => x.Id == power.ActiveId)?.Name ?? "状态未知" : "读取中";
+    public bool HasMultiplePowerSchemes => coordinator.Power.Current.Value?.Schemes.Length > 1;
+    public bool HasMultipleOutputs => OutputDevices.Count > 1;
+    public string OutputHint => OutputDevices.Count == 1 ? "当前只有一个输出设备。" : OutputDevices.Count == 0 ? "未发现可用输出设备。" : "选择设备后切换默认输出。";
     public string PowerHint => coordinator.Power.Current.Value?.Schemes.Length == 1
         ? "系统仅提供一个电源方案。可打开电源设置调整电源模式。"
         : "切换整个方案，可能影响亮度和睡眠设置。";
@@ -136,7 +139,7 @@ public sealed class PanelViewModel : INotifyPropertyChanged, IDisposable
     private void AudioChanged() => dispatch(() => { if (!disposed) ApplyAudio(); });
     private void ApplyAudio()
     {
-        Changed(nameof(OutputDevices));
+        Changed(nameof(OutputDevices)); Changed(nameof(HasMultipleOutputs)); Changed(nameof(OutputHint));
         var audio = coordinator.Audio.Current.Value;
         if (gestureActive && gestureEndpoint is not null && audio is not null && !audio.Devices.Any(x => x.Id == gestureEndpoint))
         {
@@ -150,7 +153,7 @@ public sealed class PanelViewModel : INotifyPropertyChanged, IDisposable
     private void PowerChanged() => dispatch(() =>
     {
         if (disposed) return;
-        Changed(nameof(ActivePowerName)); Changed(nameof(PowerHint)); Changed(nameof(PowerChoices)); Changed(nameof(PowerStatus)); Changed(nameof(PowerAvailable)); Changed(nameof(PowerSource)); SelectPower.Notify();
+        Changed(nameof(HasMultiplePowerSchemes)); Changed(nameof(ActivePowerName)); Changed(nameof(PowerHint)); Changed(nameof(PowerChoices)); Changed(nameof(PowerStatus)); Changed(nameof(PowerAvailable)); Changed(nameof(PowerSource)); SelectPower.Notify();
     });
     private static string Status<T>(ModuleState<T> state) where T : class
         => state.Operation == CommandOutcome.Pending ? "操作中，等待系统确认…" :
@@ -174,4 +177,3 @@ public sealed class PanelViewModel : INotifyPropertyChanged, IDisposable
         coordinator.Audio.Changed -= AudioChanged; coordinator.Power.Changed -= PowerChanged;
     }
 }
-

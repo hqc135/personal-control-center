@@ -155,6 +155,12 @@ internal static class Program
                         var updateWindow = new UpdateWindow(new ControlCenter.Windows.UpdatePackages(Path.Combine(args[1], "fake-versions")));
                         updateWindow.Show(); await Task.Delay(100); updateWindow.UpdateLayout(); Capture(updateWindow, Path.Combine(args[1], theme + "-updates.png")); updateWindow.Close();
                     }
+                    if (model.HasMultiplePowerSchemes || model.HasMultipleOutputs) throw new Exception("Single-device capability incorrectly enabled");
+                    if (!Descendants(panel).OfType<System.Windows.Controls.TextBlock>().Any(t => t.Text == "42%")) throw new Exception("Brightness percentage missing");
+                    desktopService.Empty = true; await desktop.RefreshAsync(); panel.UpdateLayout();
+                    if (((FrameworkElement)panel.FindName("MediaCard")).Visibility != Visibility.Collapsed) throw new Exception("Empty media card remained visible");
+                    if (!desktop.BrightnessHint.Contains("未发现") || desktop.MuteMicrophone.CanExecute(null)) throw new Exception("Unsupported controls not represented");
+                    Capture(panel, Path.Combine(args[1], "no-capabilities.png"));
                     File.WriteAllText(Path.Combine(args[1], "result.txt"), "PASS: search, microphone, brightness, media, output switch, scene execution/restore and preservation of later manual changes; favorites/all layout; pin/unpin and pinned deactivation; compact/narrow/expanded layout; native hit tests and retained geometry; settings footer, focus and backup dropdown; fake services only.");
                 }
                 catch (Exception ex) { File.WriteAllText(Path.Combine(args[1], "result.txt"), "FAIL: " + ex); Environment.ExitCode = 1; }
@@ -289,11 +295,12 @@ internal static class Program
     {
         public Task<MicrophoneState?> ReadMicrophoneAsync(CancellationToken ct) => Task.FromResult<MicrophoneState?>(mic);
         Task<DisplayBrightness[]> IBrightnessService.ReadAsync(CancellationToken ct) => Task.FromResult(new[] { display });
+        public bool Empty;
         private MicrophoneState mic = new("mic", "演示麦克风", false);
         private DisplayBrightness display = new("display", "演示显示屏", 65);
         private MediaSession media = new("player", "演示曲目", "演示播放器", true, true, true, true);
         public string? Output { get; private set; }
-        public Task<DesktopSnapshot> ReadAsync(CancellationToken ct) => Task.FromResult(new DesktopSnapshot("82% · 已接电源", "演示网络 · 链路已连接", "演示蓝牙 · 已开启", mic, [display], [media], []));
+        public Task<DesktopSnapshot> ReadAsync(CancellationToken ct) => Task.FromResult(new DesktopSnapshot("82% · 已接电源", "演示网络 · 链路已连接", "演示蓝牙 · 已开启", Empty ? null : mic, Empty ? [] : [display], Empty ? [] : [media], []));
         public Task SetMicrophoneMuteAsync(string id, bool muted, CancellationToken ct) { mic = mic with { Muted = muted }; return Task.CompletedTask; }
         public Task SetAsync(string id, int value, CancellationToken ct) { display = display with { Percent = value }; return Task.CompletedTask; }
         public Task MediaAsync(string id, string action, CancellationToken ct) { media = media with { Playing = !media.Playing }; return Task.CompletedTask; }

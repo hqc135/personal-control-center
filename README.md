@@ -2,7 +2,7 @@
 
 一个放在 Windows 托盘里的轻量控制面板，集中管理音量、电源方案、临时保持唤醒、代理检测和常用入口。
 
-0.8.1 简化设备调用链：麦克风、输出和亮度直接调用对应系统服务。保留六套配色与 CSS 主题变量，可在设置中预览、导入导出并保存。[主题说明](docs/THEMES.md)。首页只放收藏，“全部功能”提供媒体、麦克风、亮度、连接状态、场景与更新；窄窗口自动单列。顶栏可固定面板，窗口位置与大小跨重启保存。
+0.9.0 收紧日常面板：亮度百分比、长名称截断、详情折叠，并按现有设备和电源方案显示控制项。麦克风、输出和亮度直接调用对应系统服务。保留六套配色与 CSS 主题变量，可在设置中预览、导入导出并保存。[主题说明](docs/THEMES.md)。首页只放收藏，“全部功能”提供媒体、麦克风、亮度、连接状态、场景与更新；窄窗口自动单列。顶栏可固定面板，窗口位置与大小跨重启保存。
 
 ![深色控制中心，截图使用演示数据](docs/images/control-center-dark.png)
 
@@ -10,7 +10,7 @@
 
 ## 下载与使用
 
-**0.8.1 本地候选包：`artifacts/PersonalControlCenter-0.8.1-win-x64.zip`**。GitHub 尚未发布此候选；[查看已发布版本](https://github.com/hqc135/personal-control-center/releases)，旧版本不含本轮新增功能。
+**[下载 0.9.0 · Windows x64 ZIP](https://github.com/hqc135/personal-control-center/releases/download/v0.9.0/PersonalControlCenter-0.9.0-win-x64.zip)** · [发布说明与 SHA256](https://github.com/hqc135/personal-control-center/releases/tag/v0.9.0)。私有仓库需先登录有访问权限的 GitHub 账号。下载后完整解压即可运行；这是供日常试用的预发布版。
 
 1. 下载 ZIP，完整解压到你想放置的目录。
 2. 双击 `PersonalControlCenter.exe`，即可使用。
@@ -49,4 +49,4 @@
 - [维护说明](docs/MAINTENANCE.md)：源码结构、开发环境、构建测试和发布流程。
 - [验收记录](docs/acceptance/UI-2026-10-02.md) · [发布检查](docs/RELEASE_CHECKLIST.md)
 
-当前源码与本地候选 **0.8.1**。199 项自动测试和假数据界面验收通过；已完成此机只读探测、面板刷新和退出验收，并修复重复亮度读取与退出异常。真实写入控制、性能、多屏/DPI 等完整矩阵仍待验收。程序未签名，当前用于个人试用。见 [本轮验收](docs/acceptance/0.8.1.md)。
+当前源码与发布试用版 **0.9.0**。199 项自动测试和假数据界面验收通过；已完成此机只读探测、面板刷新和退出验收，并修复重复亮度读取与退出异常。真实写入控制、性能、多屏/DPI 等完整矩阵仍待验收。程序未签名，当前用于个人试用。见 [本轮验收](docs/acceptance/0.9.0.md)。
