@@ -9,7 +9,7 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
-        if (args.Length is < 1 or > 2 || args[0] is not ("--allow-ui" or "--allow-ui-themes"))
+        if (args.Length is < 1 or > 2 || args[0] is not ("--allow-ui" or "--allow-ui-themes" or "--allow-ui-continuity"))
         { Console.Error.WriteLine("This tool opens a window. Run only with explicit UI-test authorization and --allow-ui."); return 2; }
         var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("pack://application:,,,/PersonalControlCenter;component/Themes/Controls.xaml") });
@@ -40,6 +40,7 @@ internal static class Program
                 try
                 {
                     Directory.CreateDirectory(args[1]);
+                    if (args[0] == "--allow-ui-continuity") { await CheckContinuity(panel, model, coordinator, audio, desktopService, args[1]); return; }
                     if (args[0] == "--allow-ui-themes") { await CheckThemes(panel, config, args[1]); return; }
                     await Task.Delay(700);
                     panel.MotionEnabled = false;
@@ -171,6 +172,50 @@ internal static class Program
         coordinator.DisposeAsync().AsTask().GetAwaiter().GetResult();
         return Environment.ExitCode;
     }
+    private static async Task CheckContinuity(ControlPanel panel, PanelViewModel model, ControlCoordinator coordinator, FakeAudio audio, FakeDesktop desktop, string output)
+    {
+        await Task.Delay(250); panel.MotionEnabled = true; panel.CanHide = true;
+        panel.Dismiss(); await Task.Delay(20);
+        var root = (FrameworkElement)panel.FindName("ContentRoot"); var opacity = root.Opacity;
+        panel.Present();
+        if (root.Opacity > opacity + .08) throw new Exception("Reopening jumped instead of reversing");
+        await Task.Delay(220);
+        if (!panel.IsVisible || panel.Phase != PanelPhase.Open) throw new Exception("Old close completion hid reopened panel");
+        var volume = (System.Windows.Controls.Slider)panel.FindName("VolumeSlider");
+        var value = (FrameworkElement)panel.FindName("VolumeValue");
+        model.BeginVolumeGesture(); model.Volume = 6; panel.UpdateLayout(); var bounds = value.RenderSize;
+        model.Volume = 100; panel.UpdateLayout(); if (value.RenderSize != bounds || volume.Value != 100) throw new Exception("Volume tracking or number width changed");
+        model.EndVolumeGesture(); await Task.Delay(100);
+        audio.Multiple = true; await coordinator.RefreshAsync();
+        var trigger = (FrameworkElement)panel.FindName("DeviceButton"); var anchor = trigger.TranslatePoint(new Point(), panel);
+        model.ToggleDevices.Execute(null); await Task.Delay(100); panel.UpdateLayout();
+        if ((trigger.TranslatePoint(new Point(), panel) - anchor).Length > .1) throw new Exception($"Device expansion moved trigger: {anchor} -> {trigger.TranslatePoint(new Point(), panel)}");
+        var picker = (System.Windows.Controls.ComboBox)panel.FindName("OutputPicker"); picker.SelectedItem = model.OutputDevices.Single(x => x.Id == "next");
+        var selected = picker.SelectedItem; await coordinator.RefreshAsync(); panel.UpdateLayout();
+        if (!ReferenceEquals(selected, picker.SelectedItem)) throw new Exception("Refresh reset output selection");
+        var gate = new TaskCompletionSource<bool>(); desktop.SwitchHandler = async id => { if (!await gate.Task) throw new IOException("演示切换失败，原设备保留"); audio.DefaultId = id; };
+        var request = model.SelectOutputAsync("next"); panel.UpdateLayout();
+        if (!model.OutputBusy || !model.DevicesOpen || model.Device != "演示扬声器") throw new Exception("Output waiting state lost original device");
+        await Task.Delay(60); panel.UpdateLayout();
+        File.WriteAllText(Path.Combine(output, "visible-labels.txt"), string.Join("\n", Descendants(panel).OfType<System.Windows.Controls.TextBlock>().Where(t => t.Text == model.Device || t.Text == model.PowerSource).Select(t => $"{t.Text}: {t.Foreground} {t.Visibility} {t.ActualWidth}x{t.ActualHeight}")));
+        Capture(panel, Path.Combine(output, "output-pending.png"));
+        gate.SetResult(false); await request; panel.UpdateLayout();
+        if (!model.DevicesOpen || model.OutputBusy || !model.OutputStatus.Contains("失败")) throw new Exception("Failure collapsed output list");
+        Capture(panel, Path.Combine(output, "output-failed.png"));
+        gate = new TaskCompletionSource<bool>(); request = model.SelectOutputAsync("next"); gate.SetResult(true); await request; panel.UpdateLayout();
+        if (model.DevicesOpen || model.Device != "演示耳机") throw new Exception("Confirmed switch did not close list");
+        var power = (FrameworkElement)panel.FindName("PowerCard"); var powerPosition = power.TranslatePoint(new Point(), panel);
+        var host = (System.Windows.Controls.Panel)panel.FindName("ModuleHost"); var first = host.Children[0];
+        model.Notice = new string('错', 150); await model.Desktop.RefreshAsync(); panel.UpdateLayout();
+        if (power.TranslatePoint(new Point(), panel) != powerPosition || !ReferenceEquals(first, host.Children[0])) throw new Exception("Status refresh moved/replaced controls");
+        Capture(panel, Path.Combine(output, "stable-feedback.png"));
+        panel.SuppressDismiss = false;
+        var outside = new Window { Title = "演示外部窗口 · 无系统操作", Width = 220, Height = 100, ShowInTaskbar = false };
+        outside.Show(); outside.Activate(); await Task.Delay(250);
+        if (panel.IsVisible) throw new Exception("Outside activation did not close panel");
+        outside.Close();
+        File.WriteAllText(Path.Combine(output, "result.txt"), "PASS: reversible open/close, direct volume tracking and fixed number width, stable device trigger and refresh selection, pending/failure/success output switch, fixed feedback layout, outside dismissal. Fake services only.");
+    }
     private static async Task CheckThemes(ControlPanel panel, AppConfig config, string output)
     {
         await Task.Delay(300); panel.MotionEnabled = false;
@@ -254,9 +299,11 @@ internal static class Program
     }
     private sealed class FakeAudio : IAudioService
     {
+        public bool Multiple;
+        public string DefaultId = "fake";
         private AudioLevel level = new("fake", .6f, false);
         public event Action? Invalidated;
-        public Task<AudioSnapshot> ReadAsync(CancellationToken ct) => Task.FromResult(new AudioSnapshot([new("fake", "演示扬声器")], "fake", null, level));
+        public Task<AudioSnapshot> ReadAsync(CancellationToken ct) => Task.FromResult(new AudioSnapshot(Multiple ? [new("fake", "演示扬声器"), new("next", "演示耳机")] : [new("fake", "演示扬声器")], DefaultId, null, level with { EndpointId = DefaultId }));
         public Task<AudioLevel> ReadLevelAsync(string id, CancellationToken ct) => Task.FromResult(level);
         public Task SetVolumeAsync(string id, float value, CancellationToken ct) { level = level with { Volume = value }; Invalidated?.Invoke(); return Task.CompletedTask; }
         public Task SetMuteAsync(string id, bool value, CancellationToken ct) { level = level with { Muted = value }; Invalidated?.Invoke(); return Task.CompletedTask; }
@@ -299,12 +346,13 @@ internal static class Program
         private MicrophoneState mic = new("mic", "演示麦克风", false);
         private DisplayBrightness display = new("display", "演示显示屏", 65);
         private MediaSession media = new("player", "演示曲目", "演示播放器", true, true, true, true);
+        public Func<string, Task>? SwitchHandler;
         public string? Output { get; private set; }
         public Task<DesktopSnapshot> ReadAsync(CancellationToken ct) => Task.FromResult(new DesktopSnapshot("82% · 已接电源", "演示网络 · 链路已连接", "演示蓝牙 · 已开启", Empty ? null : mic, Empty ? [] : [display], Empty ? [] : [media], []));
         public Task SetMicrophoneMuteAsync(string id, bool muted, CancellationToken ct) { mic = mic with { Muted = muted }; return Task.CompletedTask; }
         public Task SetAsync(string id, int value, CancellationToken ct) { display = display with { Percent = value }; return Task.CompletedTask; }
         public Task MediaAsync(string id, string action, CancellationToken ct) { media = media with { Playing = !media.Playing }; return Task.CompletedTask; }
-        public Task SwitchOutputAsync(string id, CancellationToken ct) { Output = id; return Task.CompletedTask; }
+        public async Task SwitchOutputAsync(string id, CancellationToken ct) { Output = id; if (SwitchHandler is not null) await SwitchHandler(id); }
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 }

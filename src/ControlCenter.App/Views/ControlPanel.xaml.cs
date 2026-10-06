@@ -50,6 +50,10 @@ public partial class ControlPanel : Window
     public void Present(NativeTray? tray = null)
     {
         anchorTray = tray;
+        if (IsVisible && transition.Phase != PanelPhase.Closed)
+        { Activate(); if (transition.Phase == PanelPhase.Closing) Animate(true); return; }
+        if (MotionEnabled && SystemParameters.ClientAreaAnimation)
+        { ContentRoot.Opacity = 0; ((TranslateTransform)ContentRoot.RenderTransform).Y = 4; }
         if (!geometryRestored)
         {
             geometryRestored = true;
@@ -127,12 +131,15 @@ public partial class ControlPanel : Window
         var order = Model.Modules.Concat(cards.Keys.Except(Model.Modules)).ToArray();
         var visible = order.Where(id => (allFeatures || Model.Desktop.Preferences.Favorites.Contains(id))
             && (id != "battery" || Model.Desktop.Battery.Length > 0) && (id != "media" || Model.Desktop.Media.Length > 0) && (id != "tools" || allFeatures)).ToArray();
-        string signature = string.Join(',', visible);
-        if (signature == layoutSignature && ModuleHost.Children.Count > 0) return;
-        layoutSignature = signature;
-        ModuleHost.Children.Clear();
-        foreach (string id in visible) { cards[id].Visibility = Visibility.Visible; ModuleHost.Children.Add(cards[id]); }
-        foreach (var (id, card) in cards) if (!visible.Contains(id)) { card.Visibility = Visibility.Collapsed; ModuleHost.Children.Add(card); }
+        // Availability changes only visibility; ordinary refresh keeps visual children and focus.
+        string signature = string.Join(',', order);
+        if (signature != layoutSignature || ModuleHost.Children.Count == 0)
+        {
+            layoutSignature = signature;
+            ModuleHost.Children.Clear();
+            foreach (string id in order) ModuleHost.Children.Add(cards[id]);
+        }
+        foreach (var (id, card) in cards) card.Visibility = visible.Contains(id) ? Visibility.Visible : Visibility.Collapsed;
     }
     public void Toggle(NativeTray? tray)
     {
@@ -145,15 +152,17 @@ public partial class ControlPanel : Window
         var token = transition.Request(opening);
         var transform = (TranslateTransform)ContentRoot.RenderTransform;
         var opacity = wasClosed && opening ? 0 : ContentRoot.Opacity;
-        var y = wasClosed && opening ? 6 : transform.Y;
+        var y = wasClosed && opening ? 4 : transform.Y;
         ContentRoot.BeginAnimation(OpacityProperty, null);
         transform.BeginAnimation(TranslateTransform.YProperty, null);
+        ContentRoot.Opacity = opacity; transform.Y = y;
         if (!MotionEnabled || !SystemParameters.ClientAreaAnimation)
         {
             ContentRoot.Opacity = 1; transform.Y = 0;
             transition.Complete(token); if (!opening) Hide(); return;
         }
-        var duration = TimeSpan.FromMilliseconds(opening ? 140 : 120);
+        var distance = Math.Clamp(opening ? 1 - opacity : opacity, 0, 1);
+        var duration = TimeSpan.FromMilliseconds(Math.Max(1, (opening ? 140 : 90) * distance));
         var fade = new DoubleAnimation(opacity, opening ? 1 : 0, duration) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
         fade.Completed += (_, _) =>
         {
@@ -163,7 +172,7 @@ public partial class ControlPanel : Window
             if (!opening) Hide();
         };
         ContentRoot.BeginAnimation(OpacityProperty, fade, HandoffBehavior.SnapshotAndReplace);
-        transform.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(y, opening ? 0 : 6, duration) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } }, HandoffBehavior.SnapshotAndReplace);
+        transform.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(y, opening ? 0 : 4, duration) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } }, HandoffBehavior.SnapshotAndReplace);
     }
     private void OnKey(object sender, KeyEventArgs e)
     {
@@ -212,7 +221,7 @@ public partial class ControlPanel : Window
     private void OpenShortcut_Click(object sender, RoutedEventArgs e) => OpenSelectedShortcut();
     private async void Output_Click(object sender, RoutedEventArgs e)
     {
-        if (OutputPicker.SelectedItem is AudioDevice device) { await Model.Desktop.SwitchOutputAsync(device.Id); Model.Refresh.Execute(null); Model.Notice = Model.Desktop.Status; }
+        if (OutputPicker.SelectedItem is AudioDevice device) { await Model.SelectOutputAsync(device.Id); }
     }
     private async void Brightness_Click(object sender, RoutedEventArgs e)
     {
@@ -239,7 +248,7 @@ public partial class ControlPanel : Window
     private void Volume_Begin(object sender, MouseButtonEventArgs e) => Model.BeginVolumeGesture();
     private void Volume_End(object sender, MouseButtonEventArgs e) => Model.EndVolumeGesture();
     private void Volume_LostCapture(object sender, MouseEventArgs e) => Model.EndVolumeGesture();
-    private void DeviceList_VisibleChanged(object sender, DependencyPropertyChangedEventArgs e) { if (DeviceList.IsVisible) Dispatcher.BeginInvoke(() => DeviceList.MoveFocus(new TraversalRequest(FocusNavigationDirection.First))); else if (IsVisible) DeviceButton.Focus(); }
+    private void DeviceList_VisibleChanged(object sender, DependencyPropertyChangedEventArgs e) { if (!DeviceList.IsVisible && IsVisible) DeviceButton.Focus(); }
     protected override void OnClosing(CancelEventArgs e)
     {
         if (!exiting) { e.Cancel = true; if (CanHide) Dismiss(); else ExitRequested?.Invoke(); }

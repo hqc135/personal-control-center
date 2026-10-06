@@ -34,31 +34,41 @@ public sealed class DesktopViewModel : INotifyPropertyChanged, IDisposable
     public RelayCommand MuteMicrophone { get; }
     public RelayCommand OpenSettings { get; }
     public bool Busy => busy;
+    public bool IsStale { get; private set; }
+    public bool CanOperate => !busy && !disposed && !IsStale && Snapshot is not null;
     public DesktopViewModel(IShortcutLauncher launcher, IDesktopFeatures? service = null, IFeaturePreferencesStore? store = null, SceneRunner? scenes = null, string[]? defaultFavorites = null, IAudioDevices? audio = null, IBrightnessService? brightness = null)
     {
         this.launcher = launcher; this.service = service; this.audio = audio; this.brightness = brightness; this.store = store; Scenes = scenes;
         try { var defaults = new FeaturePreferences { Favorites = defaultFavorites ?? Preferences.Favorites }; Preferences = store?.Load(defaults) ?? defaults; }
         catch { preferencesReadOnly = true; Status = "功能配置读取失败，原文件保留；本次不保存布局或场景。"; }
         Refresh = new(_ => { _ = RefreshAsync(); }, _ => !busy && !disposed);
-        MuteMicrophone = new(_ => { _ = ToggleMicrophoneAsync(); }, _ => !busy && !disposed && audio is not null && Snapshot?.Microphone is not null);
+        MuteMicrophone = new(_ => { _ = ToggleMicrophoneAsync(); }, _ => CanOperate && audio is not null && Snapshot?.Microphone is not null);
         OpenSettings = new(p => { if (p is string key) _ = OpenSettingsAsync(key); });
     }
     public async Task RefreshAsync()
     {
         if (busy || disposed || service is null) return;
-        busy = true; Notify();
+        busy = true; Status = Snapshot is null ? "正在读取设备…" : "正在刷新，保留当前显示…"; Notify();
         try
         {
-            Snapshot = await service.ReadAsync(lifetime.Token);
-            Status = Snapshot.Warnings.Length > 0 ? string.Join("；", Snapshot.Warnings) : $"更新于 {DateTime.Now:HH:mm:ss} · 仅在打开或手动刷新时读取";
+            var next = await service.ReadAsync(lifetime.Token);
+            if (disposed) return;
+            // Keep item containers and unsubmitted slider positions when the values did not change.
+            if (Snapshot is { } old) next = next with {
+                Microphone = next.Warnings.Any(x => x.Contains("麦克风")) ? old.Microphone : next.Microphone,
+                Displays = next.Warnings.Any(x => x.Contains("亮度")) || old.Displays.SequenceEqual(next.Displays) ? old.Displays : next.Displays,
+                Media = next.Warnings.Any(x => x.Contains("媒体")) || old.Media.SequenceEqual(next.Media) ? old.Media : next.Media
+            };
+            Snapshot = next; IsStale = next.Warnings.Length > 0;
+            Status = IsStale ? "部分刷新失败，保留失败项的上次读数；控制已暂停。" + string.Join("；", Snapshot.Warnings) : $"更新于 {DateTime.Now:HH:mm:ss} · 仅在打开或手动刷新时读取";
         }
         catch (OperationCanceledException) { }
-        catch { Snapshot = null; Status = "设备状态读取失败，请刷新；旧数据未作为当前状态显示。"; }
+        catch { IsStale = true; Status = Snapshot is null ? "设备状态读取失败，请刷新。" : "刷新失败，显示上次读取值；控制已暂停，请重试。"; }
         finally { busy = false; if (!disposed) Notify(); }
     }
-    private async Task RunAsync(Func<CancellationToken, Task> action)
+    private async Task<bool> RunAsync(Func<CancellationToken, Task> action)
     {
-        if (busy || disposed || service is null) return;
+        if (!CanOperate || service is null) return false;
         busy = true; Status = "操作中…"; Notify();
         string? error = null;
         try { await action(lifetime.Token); }
@@ -66,14 +76,15 @@ public sealed class DesktopViewModel : INotifyPropertyChanged, IDisposable
         finally { busy = false; }
         await RefreshAsync();
         if (error is not null) Status = error;
-        if (!disposed) OperationCompleted?.Invoke(error ?? "操作已提交，已刷新设备状态。");
+        if (!disposed) OperationCompleted?.Invoke(error ?? (IsStale ? "操作已提交，但状态刷新失败，请重新确认。" : "操作已提交，已刷新设备状态。"));
         if (!disposed) Notify();
+        return error is null && !disposed;
     }
     public Task ToggleMicrophoneAsync() => Snapshot?.Microphone is { } m && audio is not null
         ? RunAsync(ct => audio.SetMicrophoneMuteAsync(m.Id, !m.Muted, ct)) : Task.CompletedTask;
     public Task SetBrightnessAsync(string id, int value) => RunAsync(ct => brightness!.SetAsync(id, value, ct));
     public Task MediaAsync(string id, string action) => RunAsync(ct => service!.MediaAsync(id, action, ct));
-    public Task SwitchOutputAsync(string id) => RunAsync(ct => audio!.SwitchOutputAsync(id, ct));
+    public Task<bool> SwitchOutputAsync(string id) => RunAsync(ct => audio!.SwitchOutputAsync(id, ct));
     private async Task OpenSettingsAsync(string key)
     {
         try { var result = await launcher.OpenSettingsPageAsync(key, lifetime.Token); Status = result.Message ?? (result.Outcome == CommandOutcome.Confirmed ? "已打开系统设置" : "系统设置未打开"); }

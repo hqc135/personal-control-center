@@ -54,7 +54,7 @@ $commit | Set-Content -LiteralPath (Join-Path $source 'SOURCE_COMMIT.txt') -Enco
 $payload = @(Get-ChildItem -LiteralPath $release -File -Recurse | ForEach-Object {
     [ordered]@{Path=[IO.Path]::GetRelativePath($release,$_.FullName); SHA256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash}
 })
-[ordered]@{Version='0.9.0';Commit=$commit;Mode=$Mode;Acceptance='Automated, fake-service UI and real-machine read-only acceptance; hardware writes untested';Files=$payload} |
+[ordered]@{Version='0.9.1';Commit=$commit;Mode=$Mode;Acceptance='Automated, fake-service UI and real-machine read-only acceptance; hardware writes untested';Files=$payload} |
     ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $release 'RELEASE.json') -Encoding utf8
 $zip = 'artifacts/PersonalControlCenter-B6-CANDIDATE-' + $Mode + '.zip'
 Compress-Archive -Path (Join-Path $release '*') -DestinationPath $zip -Force

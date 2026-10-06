@@ -10,7 +10,7 @@ public sealed class RelayCommand(Action<object?> execute, Func<object?, bool>? c
     public event EventHandler? CanExecuteChanged;
     public void Notify() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
 }
-public sealed record PowerChoice(Guid Id, string Label);
+public sealed record PowerChoice(Guid Id, string Label, bool IsSelected = false);
 public sealed class PanelViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly ControlCoordinator coordinator;
@@ -29,7 +29,11 @@ public sealed class PanelViewModel : INotifyPropertyChanged, IDisposable
     public string DataOriginLabel { get; init; } = "真实系统状态";
     public SessionViewModel? Session { get; }
     public DesktopViewModel Desktop { get; }
-    public IReadOnlyList<AudioDevice> OutputDevices => coordinator.Audio.Current.Value?.Devices.ToArray() ?? [];
+    private AudioDevice[] outputDevices = [];
+    private PowerChoice[] powerChoices = [];
+    public IReadOnlyList<AudioDevice> OutputDevices => outputDevices;
+    public bool OutputBusy { get; private set; }
+    public string OutputStatus { get; private set; } = "";
     private string searchText = "";
     public string SearchText { get => searchText; set { searchText = value; Changed(); Changed(nameof(FilteredShortcuts)); } }
     public IReadOnlyList<ShortcutDefinition> FilteredShortcuts => config.Shortcuts.Where(x => x.Label.Contains(searchText.Trim(), StringComparison.OrdinalIgnoreCase)).ToArray();
@@ -66,8 +70,7 @@ public sealed class PanelViewModel : INotifyPropertyChanged, IDisposable
         x.Name + (x.Id == coordinator.Audio.Current.Value.DefaultEndpointId ? " · 媒体" : "")
             + (x.Id == coordinator.Audio.Current.Value.CommunicationsEndpointId ? " · 通话" : "")
             + (x.Id == coordinator.Audio.Current.Value.ConsoleEndpointId ? " · 控制台" : "")).ToArray() ?? [];
-    public IReadOnlyList<PowerChoice> PowerChoices => coordinator.Power.Current.Value is { } power
-        ? power.Schemes.Select(x => new PowerChoice(x.Id, (power.ActiveId == x.Id ? "✓  " : "") + x.Name)).ToArray() : [];
+    public IReadOnlyList<PowerChoice> PowerChoices => powerChoices;
     public IReadOnlyList<ShortcutDefinition> Shortcuts => config.Shortcuts;
     public string Notice { get => notice; set { notice = value; Changed(); } }
     public bool DevicesOpen { get => devicesOpen; set { devicesOpen = value; Changed(); } }
@@ -86,15 +89,31 @@ public sealed class PanelViewModel : INotifyPropertyChanged, IDisposable
         Desktop.OperationCompleted += DesktopOperationCompleted;
         coordinator.SetModules(config.Modules.Contains("audio"), config.Modules.Contains("power"));
         Mute = new(p => { _ = RunMuteAsync(); }, p => AudioAvailable);
-        ToggleDevices = new(p => DevicesOpen = !DevicesOpen);
+        ToggleDevices = new(p => { DevicesOpen = !DevicesOpen; if (DevicesOpen) _ = Desktop.RefreshAsync(); });
         SoundSettings = new(p => { _ = RunAsync(() => launcher.OpenSoundSettingsAsync(CancellationToken.None)); });
         PowerSettings = new(_ => { _ = RunAsync(() => launcher.OpenPowerSettingsAsync(CancellationToken.None)); });
-        SelectPower = new(p => { if (p is Guid id) _ = RunAsync(() => coordinator.SetPowerAsync(id)); }, p => PowerAvailable && p is Guid id && coordinator.Power.Current.Value is { } current && current.ActiveId != id && current.Schemes.Any(x => x.Id == id));
+        SelectPower = new(p => { if (p is Guid id) _ = RunAsync(() => coordinator.SetPowerAsync(id)); }, p => PowerAvailable && coordinator.Power.Current.Operation != CommandOutcome.Pending && p is Guid id && coordinator.Power.Current.Value is { } current && current.ActiveId != id && current.Schemes.Any(x => x.Id == id));
         Launch = new(p => { if (p is ShortcutDefinition entry) _ = RunAsync(() => shortcuts.LaunchAsync(entry)); });
         Refresh = new(p => { _ = coordinator.RefreshAsync(); _ = Desktop.RefreshAsync(); });
         EditShortcuts = new(p => ShortcutSettingsRequested?.Invoke());
         coordinator.Audio.Changed += AudioChanged;
         coordinator.Power.Changed += PowerChanged;
+    }
+    public async Task SelectOutputAsync(string id)
+    {
+        if (OutputBusy || disposed || !Desktop.CanOperate || !OutputDevices.Any(x => x.Id == id)) return;
+        OutputBusy = true; OutputStatus = "正在切换，等待系统确认…"; Changed(nameof(OutputBusy)); Changed(nameof(OutputStatus));
+        try
+        {
+            bool confirmed = await Desktop.SwitchOutputAsync(id);
+            await coordinator.RefreshAudioAsync();
+            if (disposed) return;
+            if (confirmed && coordinator.Audio.Current is { IsStale: false, Value: { } audio } && audio.DefaultEndpointId == id)
+            { OutputStatus = "已确认输出设备。"; DevicesOpen = false; }
+            else OutputStatus = confirmed ? "尚未读回目标设备，请刷新确认。" : Desktop.Status;
+        }
+        catch { if (!disposed) OutputStatus = "输出切换未确认，请重试或打开系统声音设置。"; }
+        finally { OutputBusy = false; if (!disposed) { Changed(nameof(OutputBusy)); Changed(nameof(OutputStatus)); } }
     }
     private async Task RunMuteAsync()
     {
@@ -139,7 +158,9 @@ public sealed class PanelViewModel : INotifyPropertyChanged, IDisposable
     private void AudioChanged() => dispatch(() => { if (!disposed) ApplyAudio(); });
     private void ApplyAudio()
     {
-        Changed(nameof(OutputDevices)); Changed(nameof(HasMultipleOutputs)); Changed(nameof(OutputHint));
+        var devices = coordinator.Audio.Current.Value?.Devices.ToArray() ?? [];
+        if (!outputDevices.SequenceEqual(devices)) { outputDevices = devices; Changed(nameof(OutputDevices)); }
+        Changed(nameof(HasMultipleOutputs)); Changed(nameof(OutputHint));
         var audio = coordinator.Audio.Current.Value;
         if (gestureActive && gestureEndpoint is not null && audio is not null && !audio.Devices.Any(x => x.Id == gestureEndpoint))
         {
@@ -153,7 +174,10 @@ public sealed class PanelViewModel : INotifyPropertyChanged, IDisposable
     private void PowerChanged() => dispatch(() =>
     {
         if (disposed) return;
-        Changed(nameof(HasMultiplePowerSchemes)); Changed(nameof(ActivePowerName)); Changed(nameof(PowerHint)); Changed(nameof(PowerChoices)); Changed(nameof(PowerStatus)); Changed(nameof(PowerAvailable)); Changed(nameof(PowerSource)); SelectPower.Notify();
+        var power = coordinator.Power.Current.Value;
+        var choices = power?.Schemes.Select(x => new PowerChoice(x.Id, (power.ActiveId == x.Id ? "✓  " : "") + x.Name, power.ActiveId == x.Id)).ToArray() ?? [];
+        if (!powerChoices.SequenceEqual(choices)) { powerChoices = choices; Changed(nameof(PowerChoices)); }
+        Changed(nameof(HasMultiplePowerSchemes)); Changed(nameof(ActivePowerName)); Changed(nameof(PowerHint)); Changed(nameof(PowerStatus)); Changed(nameof(PowerAvailable)); Changed(nameof(PowerSource)); SelectPower.Notify();
     });
     private static string Status<T>(ModuleState<T> state) where T : class
         => state.Operation == CommandOutcome.Pending ? "操作中，等待系统确认…" :

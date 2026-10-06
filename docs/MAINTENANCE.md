@@ -90,3 +90,5 @@ GitHub Release 默认交付 self-contained win-x64，运行时来自官方 NuGet
 
 
 系统调用链和保留边界见 [SYSTEM_CALLS.md](SYSTEM_CALLS.md)。App 拥有音频和亮度实例，DesktopFeatures 不再代持或释放亮度服务。
+
+0.9.1 本地候选集中优化操作连续性：稳定选项集合、局部等待反馈、保留并标明过期数据、反向开合。专用演示验收参数 --allow-ui-continuity；记录见 acceptance/0.9.1.md。GitHub Release 仍为 0.9.0。
